@@ -1,0 +1,15 @@
+﻿<Window x:Class="StorePos.Desktop.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:salesViews="clr-namespace:StorePos.Desktop.Sales.Views"
+        mc:Ignorable="d"
+        Title="StorePos — გაყიდვები"
+        Height="720"
+        Width="1100"
+        MinHeight="520"
+        MinWidth="820"
+        WindowStartupLocation="CenterScreen">
+    <salesViews:SalesWorkspaceView />
+</Window>
