@@ -4,6 +4,9 @@ namespace StorePos.Domain.Aggregates.Sale;
 
 public sealed class SaleItem : AuditableEntity<long>
 {
+    public const int ProductNameMaxLength = 300;
+    public const int CommentMaxLength = 500;
+
     private SaleItem()
     {
     }
@@ -59,28 +62,57 @@ public sealed class SaleItem : AuditableEntity<long>
 
     public string? Comment { get; private set; }
 
-    internal static SaleItem Create(
+    internal static SaleItem CreateManual(
         long saleId,
-        long? productId,
-        string? productCode,
-        string? barcode,
         string productName,
-        int? measurementUnitId,
-        string? measurementUnitName,
         decimal quantity,
         decimal unitPrice,
-        bool isManual,
-        string? note = null)
-        => new(
+        string? comment = null)
+    {
+        if (string.IsNullOrWhiteSpace(productName))
+        {
+            throw new ArgumentException("Product name is required.", nameof(productName));
+        }
+
+        if (productName.Length > ProductNameMaxLength)
+        {
+            throw new ArgumentException(
+                $"Product name cannot exceed {ProductNameMaxLength} characters.",
+                nameof(productName));
+        }
+
+        if (quantity <= 0)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(quantity),
+                "Quantity must be greater than zero.");
+        }
+
+        if (unitPrice < 0)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(unitPrice),
+                "Unit price cannot be negative.");
+        }
+
+        if (comment?.Length > CommentMaxLength)
+        {
+            throw new ArgumentException(
+                $"Comment cannot exceed {CommentMaxLength} characters.",
+                nameof(comment));
+        }
+
+        return new SaleItem(
             saleId,
-            productId,
-            productCode,
-            barcode,
+            productId: null,
+            productCode: null,
+            barcode: null,
             productName,
-            measurementUnitId,
-            measurementUnitName,
+            measurementUnitId: null,
+            measurementUnitName: null,
             quantity,
             unitPrice,
-            isManual,
-            note);
+            isManual: true,
+            comment);
+    }
 }

@@ -22,7 +22,7 @@ public sealed class SaleItemConfiguration : IEntityTypeConfiguration<SaleItem>
             .HasMaxLength(100);
 
         builder.Property(x => x.ProductName)
-            .HasMaxLength(300)
+            .HasMaxLength(SaleItem.ProductNameMaxLength)
             .IsRequired();
 
         builder.Property(x => x.MeasurementUnitId)
@@ -47,7 +47,7 @@ public sealed class SaleItemConfiguration : IEntityTypeConfiguration<SaleItem>
         builder.Property(x => x.IsManual).IsRequired();
 
         builder.Property(x => x.Comment)
-            .HasMaxLength(500);
+            .HasMaxLength(SaleItem.CommentMaxLength);
 
         builder.Property(x => x.DateCreated).HasColumnType("datetime2").IsRequired();
         builder.Property(x => x.DateUpdated).HasColumnType("datetime2");

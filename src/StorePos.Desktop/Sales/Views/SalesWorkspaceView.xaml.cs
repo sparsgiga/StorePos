@@ -1,4 +1,8 @@
+using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
+using System.Windows.Threading;
+using StorePos.Desktop.Sales.ViewModels;
 
 namespace StorePos.Desktop.Sales.Views;
 
@@ -7,5 +11,63 @@ public partial class SalesWorkspaceView : UserControl
     public SalesWorkspaceView()
     {
         InitializeComponent();
+        DataContextChanged += OnDataContextChanged;
+        Unloaded += OnUnloaded;
+    }
+
+    private void OnDataContextChanged(
+        object sender,
+        DependencyPropertyChangedEventArgs e)
+    {
+        if (e.OldValue is SalesWorkspaceViewModel oldViewModel)
+        {
+            oldViewModel.ProductNameFocusRequested -= OnProductNameFocusRequested;
+        }
+
+        if (e.NewValue is SalesWorkspaceViewModel newViewModel)
+        {
+            newViewModel.ProductNameFocusRequested += OnProductNameFocusRequested;
+        }
+    }
+
+    private void OnUnloaded(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is SalesWorkspaceViewModel viewModel)
+        {
+            viewModel.ProductNameFocusRequested -= OnProductNameFocusRequested;
+        }
+    }
+
+    private void OnProductNameFocusRequested(object? sender, EventArgs e)
+    {
+        Dispatcher.BeginInvoke(
+            () =>
+            {
+                var productNameTextBox = FindByTag<TextBox>(this, "ManualProductName");
+                productNameTextBox?.Focus();
+                productNameTextBox?.SelectAll();
+            },
+            DispatcherPriority.Input);
+    }
+
+    private static T? FindByTag<T>(DependencyObject parent, object tag)
+        where T : FrameworkElement
+    {
+        for (var index = 0; index < VisualTreeHelper.GetChildrenCount(parent); index++)
+        {
+            var child = VisualTreeHelper.GetChild(parent, index);
+            if (child is T element && Equals(element.Tag, tag))
+            {
+                return element;
+            }
+
+            var descendant = FindByTag<T>(child, tag);
+            if (descendant is not null)
+            {
+                return descendant;
+            }
+        }
+
+        return null;
     }
 }

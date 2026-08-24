@@ -10,4 +10,13 @@ public interface IStorePosApiClient
     Task<CreateDraftSaleResponse> CreateDraftSaleAsync(
         CreateDraftSaleRequest request,
         CancellationToken cancellationToken = default);
+
+    Task<DraftSaleDetailsDto> GetDraftSaleDetailsAsync(
+        long saleId,
+        CancellationToken cancellationToken = default);
+
+    Task<AddManualSaleItemResponse> AddManualSaleItemAsync(
+        long saleId,
+        AddManualSaleItemRequest request,
+        CancellationToken cancellationToken = default);
 }

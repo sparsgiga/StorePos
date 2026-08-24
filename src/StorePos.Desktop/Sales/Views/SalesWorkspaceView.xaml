@@ -19,12 +19,7 @@
                 Background="White"
                 BorderBrush="#D9DDE3"
                 BorderThickness="0,0,0,1">
-            <DockPanel>
-                <TextBlock VerticalAlignment="Center"
-                           FontSize="22"
-                           FontWeight="SemiBold"
-                           Text="ღია გაყიდვები" />
-
+            <DockPanel LastChildFill="True">
                 <Button DockPanel.Dock="Right"
                         MinWidth="170"
                         Padding="16,9"
@@ -33,6 +28,10 @@
                         Content="+ ახალი გაყიდვა"
                         FontSize="15"
                         FontWeight="SemiBold" />
+                <TextBlock VerticalAlignment="Center"
+                           FontSize="22"
+                           FontWeight="SemiBold"
+                           Text="ღია გაყიდვები" />
             </DockPanel>
         </Border>
 
@@ -61,33 +60,123 @@
 
                 <TabControl.ContentTemplate>
                     <DataTemplate>
-                        <Grid Margin="22">
+                        <Grid Margin="18">
                             <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="*" />
                                 <RowDefinition Height="Auto" />
                             </Grid.RowDefinitions>
 
-                            <StackPanel>
-                                <TextBlock FontSize="18"
-                                           FontWeight="SemiBold"
-                                           Text="{Binding SaleNumber}" />
-                                <TextBlock Margin="0,5,0,0"
-                                           Foreground="#5F6B7A"
-                                           Text="{Binding DateCreated, StringFormat={}{0:dd.MM.yyyy HH:mm}}" />
-                                <TextBlock Margin="0,3,0,0"
-                                           Foreground="#5F6B7A"
-                                           Text="{Binding CustomerName, TargetNullValue=მომხმარებელი მითითებული არ არის}" />
-                            </StackPanel>
+                            <DockPanel Grid.Row="0" Margin="0,0,0,14">
+                                <StackPanel DockPanel.Dock="Left">
+                                    <TextBlock FontSize="18"
+                                               FontWeight="SemiBold"
+                                               Text="{Binding SaleNumber}" />
+                                    <TextBlock Margin="0,5,0,0"
+                                               Foreground="#5F6B7A"
+                                               Text="{Binding DateCreated, StringFormat={}{0:dd.MM.yyyy HH:mm}}" />
+                                    <TextBlock Margin="0,3,0,0"
+                                               Foreground="#5F6B7A"
+                                               Text="{Binding CustomerName, TargetNullValue=მომხმარებელი მითითებული არ არის}" />
+                                </StackPanel>
+                            </DockPanel>
 
-                            <TextBlock Grid.Row="1"
-                                       HorizontalAlignment="Center"
-                                       VerticalAlignment="Center"
-                                       Foreground="#7A8491"
-                                       FontSize="18"
-                                       Text="გაყიდვა ცარიელია" />
+                            <GroupBox Grid.Row="1"
+                                      Margin="0,0,0,14"
+                                      Padding="12"
+                                      Header="ხელით დამატება">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="3*" />
+                                        <ColumnDefinition Width="110" />
+                                        <ColumnDefinition Width="125" />
+                                        <ColumnDefinition Width="2*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
 
-                            <Border Grid.Row="2"
+                                    <StackPanel Grid.Column="0" Margin="0,0,10,0">
+                                        <TextBlock Margin="0,0,0,4" Text="დასახელება" />
+                                        <TextBox Tag="ManualProductName"
+                                                 Padding="7,5"
+                                                 Text="{Binding DataContext.ManualProductName, RelativeSource={RelativeSource AncestorType=UserControl}, UpdateSourceTrigger=PropertyChanged}" />
+                                    </StackPanel>
+
+                                    <StackPanel Grid.Column="1" Margin="0,0,10,0">
+                                        <TextBlock Margin="0,0,0,4" Text="რაოდენობა" />
+                                        <TextBox Padding="7,5"
+                                                 Text="{Binding DataContext.ManualQuantity, RelativeSource={RelativeSource AncestorType=UserControl}, UpdateSourceTrigger=PropertyChanged}" />
+                                    </StackPanel>
+
+                                    <StackPanel Grid.Column="2" Margin="0,0,10,0">
+                                        <TextBlock Margin="0,0,0,4" Text="ფასი" />
+                                        <TextBox Padding="7,5"
+                                                 Text="{Binding DataContext.ManualUnitPrice, RelativeSource={RelativeSource AncestorType=UserControl}, UpdateSourceTrigger=PropertyChanged}" />
+                                    </StackPanel>
+
+                                    <StackPanel Grid.Column="3" Margin="0,0,10,0">
+                                        <TextBlock Margin="0,0,0,4" Text="კომენტარი (არასავალდებულო)" />
+                                        <TextBox Padding="7,5"
+                                                 Text="{Binding DataContext.ManualComment, RelativeSource={RelativeSource AncestorType=UserControl}, UpdateSourceTrigger=PropertyChanged}" />
+                                    </StackPanel>
+
+                                    <Button Grid.Column="4"
+                                            MinWidth="110"
+                                            Padding="15,7"
+                                            VerticalAlignment="Bottom"
+                                            Command="{Binding DataContext.AddManualItemCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                            Content="დამატება"
+                                            FontWeight="SemiBold" />
+                                </Grid>
+                            </GroupBox>
+
+                            <Grid Grid.Row="2">
+                                <DataGrid ItemsSource="{Binding Items}"
+                                          AutoGenerateColumns="False"
+                                          CanUserAddRows="False"
+                                          CanUserDeleteRows="False"
+                                          IsReadOnly="True"
+                                          SelectionMode="Single">
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Width="*"
+                                                            MinWidth="180"
+                                                            Header="დასახელება"
+                                                            Binding="{Binding ProductName}" />
+                                        <DataGridTextColumn Width="110"
+                                                            Header="რაოდენობა"
+                                                            Binding="{Binding Quantity, StringFormat=N5}" />
+                                        <DataGridTextColumn Width="110"
+                                                            Header="ფასი"
+                                                            Binding="{Binding UnitPrice, StringFormat=N5}" />
+                                        <DataGridTextColumn Width="120"
+                                                            Header="ჯამი"
+                                                            Binding="{Binding LineTotal, StringFormat=N5}" />
+                                        <DataGridTextColumn Width="2*"
+                                                            Header="კომენტარი"
+                                                            Binding="{Binding Comment}" />
+                                    </DataGrid.Columns>
+                                </DataGrid>
+
+                                <TextBlock HorizontalAlignment="Center"
+                                           VerticalAlignment="Center"
+                                           Foreground="#7A8491"
+                                           FontSize="18"
+                                           Text="გაყიდვა ცარიელია">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Visibility" Value="Collapsed" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding Items.Count}" Value="0">
+                                                    <Setter Property="Visibility" Value="Visible" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                            </Grid>
+
+                            <Border Grid.Row="3"
+                                    Margin="0,14,0,0"
                                     Padding="16"
                                     Background="#F8F9FB"
                                     CornerRadius="6">
@@ -131,13 +220,13 @@
                 Background="White"
                 BorderBrush="#D9DDE3"
                 BorderThickness="0,1,0,0">
-            <DockPanel>
-                <TextBlock Foreground="#5F6B7A"
-                           Text="{Binding OpenSales.Count, StringFormat=ღია გაყიდვები: {0}}" />
+            <DockPanel LastChildFill="True">
                 <TextBlock DockPanel.Dock="Right"
                            HorizontalAlignment="Right"
                            Foreground="#5F6B7A"
                            Text="მონაცემები ინახება სერვერზე" />
+                <TextBlock Foreground="#5F6B7A"
+                           Text="{Binding OpenSales.Count, StringFormat=ღია გაყიდვები: {0}}" />
             </DockPanel>
         </Border>
     </Grid>

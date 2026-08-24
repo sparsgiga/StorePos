@@ -54,6 +54,16 @@ public sealed class CreateDraftSaleCommandHandlerTests
             CancellationToken cancellationToken = default)
             => Task.FromResult<IReadOnlyList<Sale>>(Array.Empty<Sale>());
 
+        public Task<Sale?> GetDraftForUpdateAsync(
+            long saleId,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult<Sale?>(null);
+
+        public Task<Sale?> GetDraftDetailsAsync(
+            long saleId,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult<Sale?>(null);
+
         public Task<Sale?> GetByIdAsync(
             long id,
             CancellationToken cancellationToken = default)

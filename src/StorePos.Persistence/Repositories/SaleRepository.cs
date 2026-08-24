@@ -16,4 +16,23 @@ public sealed class SaleRepository(StorePosDbContext context)
             .OrderBy(sale => sale.DateCreated)
             .ThenBy(sale => sale.Id)
             .ToListAsync(cancellationToken);
+
+    public Task<Sale?> GetDraftForUpdateAsync(
+        long saleId,
+        CancellationToken cancellationToken = default)
+        => Entities
+            .Include(sale => sale.Items)
+            .SingleOrDefaultAsync(
+                sale => sale.Id == saleId && sale.Status == SaleStatus.Draft,
+                cancellationToken);
+
+    public Task<Sale?> GetDraftDetailsAsync(
+        long saleId,
+        CancellationToken cancellationToken = default)
+        => Entities
+            .AsNoTracking()
+            .Include(sale => sale.Items)
+            .SingleOrDefaultAsync(
+                sale => sale.Id == saleId && sale.Status == SaleStatus.Draft,
+                cancellationToken);
 }

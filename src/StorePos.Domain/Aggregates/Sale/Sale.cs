@@ -59,6 +59,27 @@ public sealed class Sale : AuditableEntity<long>, IAggregateRoot
         string? note = null)
         => new(saleNumber, cashierId, customerName, customerIdentificationNumber, note);
 
+    public SaleItem AddManualItem(
+        string productName,
+        decimal quantity,
+        decimal unitPrice,
+        string? comment = null)
+    {
+        EnsureDraft();
+
+        var item = SaleItem.CreateManual(
+            Id,
+            productName,
+            quantity,
+            unitPrice,
+            comment);
+
+        _items.Add(item);
+        RecalculateTotal();
+
+        return item;
+    }
+
     public void Complete(DateTime dateCompleted)
     {
         EnsureDraft();
@@ -77,7 +98,10 @@ public sealed class Sale : AuditableEntity<long>, IAggregateRoot
     {
         if (Status != SaleStatus.Draft)
         {
-            throw new InvalidOperationException("Only a draft sale can be completed or cancelled.");
+            throw new InvalidOperationException("Only a draft sale can be modified.");
         }
     }
+
+    private void RecalculateTotal()
+        => TotalAmount = _items.Sum(item => item.LineTotal);
 }

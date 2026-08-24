@@ -8,4 +8,12 @@ public interface ISaleRepository :
 {
     Task<IReadOnlyList<Sale>> GetDraftsAsync(
         CancellationToken cancellationToken = default);
+
+    Task<Sale?> GetDraftForUpdateAsync(
+        long saleId,
+        CancellationToken cancellationToken = default);
+
+    Task<Sale?> GetDraftDetailsAsync(
+        long saleId,
+        CancellationToken cancellationToken = default);
 }

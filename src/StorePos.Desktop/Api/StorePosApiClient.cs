@@ -38,4 +38,39 @@ public sealed class StorePosApiClient(HttpClient httpClient) : IStorePosApiClien
                    cancellationToken)
                ?? throw new InvalidOperationException("The API returned an empty create-sale response.");
     }
+
+    public async Task<DraftSaleDetailsDto> GetDraftSaleDetailsAsync(
+        long saleId,
+        CancellationToken cancellationToken = default)
+    {
+        using var response = await httpClient.GetAsync(
+            $"api/sales/drafts/{saleId}",
+            cancellationToken);
+
+        response.EnsureSuccessStatusCode();
+
+        return await response.Content.ReadFromJsonAsync<DraftSaleDetailsDto>(
+                   JsonOptions,
+                   cancellationToken)
+               ?? throw new InvalidOperationException("The API returned an empty sale-details response.");
+    }
+
+    public async Task<AddManualSaleItemResponse> AddManualSaleItemAsync(
+        long saleId,
+        AddManualSaleItemRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        using var response = await httpClient.PostAsJsonAsync(
+            $"api/sales/{saleId}/items/manual",
+            request,
+            JsonOptions,
+            cancellationToken);
+
+        response.EnsureSuccessStatusCode();
+
+        return await response.Content.ReadFromJsonAsync<AddManualSaleItemResponse>(
+                   JsonOptions,
+                   cancellationToken)
+               ?? throw new InvalidOperationException("The API returned an empty manual-item response.");
+    }
 }
