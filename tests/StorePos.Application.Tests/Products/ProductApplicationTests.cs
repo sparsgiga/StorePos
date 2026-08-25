@@ -67,7 +67,7 @@ public sealed class ProductApplicationTests
             1,
             "20000",
             "Cement",
-            null,
+            "0000000200004",
             24,
             1m,
             2m));
@@ -75,7 +75,15 @@ public sealed class ProductApplicationTests
             1,
             "PRD-1",
             "Cement",
-            null,
+            "0000000200004",
+            24,
+            1m,
+            2m));
+        var missingBarcode = validator.Validate(new CreateProductAndAddToSaleCommand(
+            1,
+            "20000",
+            "Cement",
+            null!,
             24,
             1m,
             2m));
@@ -83,6 +91,10 @@ public sealed class ProductApplicationTests
         Assert.True(valid.IsValid);
         Assert.False(invalid.IsValid);
         Assert.Contains(invalid.Errors, error => error.PropertyName == "ProductCode");
+        Assert.False(missingBarcode.IsValid);
+        Assert.Contains(
+            missingBarcode.Errors,
+            error => error.PropertyName == "Barcode");
     }
 
     [Fact]

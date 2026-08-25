@@ -203,7 +203,7 @@ public sealed class ProductCatalogWorkflowTests
     }
 
     [Fact]
-    public async Task CreateProductAndAddToSale_AllowsOptionalBarcodeAndRejectsDuplicateCodeOrBarcode()
+    public async Task CreateProductAndAddToSale_RejectsDuplicateCodeOrBarcode()
     {
         await using var context = CreateContext();
         var unit = MeasurementUnit.Create("Piece", "pc");
@@ -215,11 +215,11 @@ public sealed class ProductCatalogWorkflowTests
         var handler = CreateProductHandler(context);
         await handler.Handle(
             new CreateProductAndAddToSaleCommand(
-                sale.Id, "30000", "Without barcode", null, unit.Id, 1m, 1m),
+                sale.Id, "30000", "First product", "12345670", unit.Id, 1m, 1m),
             CancellationToken.None);
 
         var product = Assert.Single(await context.Products.ToArrayAsync());
-        Assert.Null(product.Barcode);
+        Assert.Equal("12345670", product.Barcode);
 
         await Assert.ThrowsAsync<ProductCodeConflictException>(() => handler.Handle(
             new CreateProductAndAddToSaleCommand(

@@ -27,7 +27,7 @@
                              FontWeight="SemiBold"
                              IsReadOnly="True"
                              IsReadOnlyCaretVisible="True"
-                             Text="{Binding SaleNumber}" />
+                             Text="{Binding SaleNumber, Mode=OneWay}" />
                     <Button Margin="8,0,0,0" Padding="7,2"
                             Command="{Binding CopySaleNumberCommand}"
                             Content="კოპირება"

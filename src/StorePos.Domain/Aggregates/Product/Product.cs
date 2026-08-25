@@ -4,6 +4,7 @@ namespace StorePos.Domain.Aggregates.Product;
 
 public sealed class Product : AuditableEntity<long>, IAggregateRoot
 {
+    public const decimal MinimumPrice = 0.00001m;
     public const int CodeMaxLength = 50;
     public const int BarcodeMaxLength = 100;
     public const int NameMaxLength = 300;
@@ -65,9 +66,11 @@ public sealed class Product : AuditableEntity<long>, IAggregateRoot
 
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(measurementUnitId);
 
-        if (price < 0)
+        if (price < MinimumPrice)
         {
-            throw new ArgumentOutOfRangeException(nameof(price), "Price cannot be negative.");
+            throw new ArgumentOutOfRangeException(
+                nameof(price),
+                $"Price must be at least {MinimumPrice}.");
         }
 
         Code = normalizedCode;

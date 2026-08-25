@@ -5,13 +5,21 @@ namespace StorePos.Desktop.Configuration;
 
 public static class DesktopConfiguration
 {
+#if DEBUG
+    private const string EnvironmentName = "Development";
+#else
+    private const string EnvironmentName = "Production";
+#endif
+
     public static Uri LoadApiBaseAddress()
     {
-        var configurationPath = Path.Combine(AppContext.BaseDirectory, "appsettings.json");
+        var configurationFileName = $"appsettings.{EnvironmentName}.json";
+        var configurationPath = Path.Combine(AppContext.BaseDirectory, configurationFileName);
 
         if (!File.Exists(configurationPath))
         {
-            throw new InvalidOperationException("Desktop configuration file was not found.");
+            throw new InvalidOperationException(
+                $"Desktop configuration file '{configurationFileName}' was not found.");
         }
 
         using var configurationStream = File.OpenRead(configurationPath);

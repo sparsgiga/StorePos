@@ -320,3 +320,20 @@ Do not:
 - introduce external catalog/integration terminology yet
 - introduce microservices or messaging
 - add application features during Persistence-only tasks
+
+## Deployment database initialization
+
+StorePos requires a compatible SQL Server engine/instance to be installed and
+reachable. The configured SQL identity must be allowed to create the StorePos
+database on first run and to apply EF Core schema changes.
+
+`StorePos.Api` applies existing EF Core migrations during startup. On first run,
+EF Core creates the StorePos database and applies every migration. During an
+application upgrade, it preserves the database and applies only migrations that
+are not recorded in `__EFMigrationsHistory`.
+
+Developers remain responsible for creating new migration files with
+`dotnet ef migrations add <MigrationName>`. Cashiers and installers do not need
+to create the StorePos database or run `dotnet ef database update` manually.
+The application does not use `EnsureCreated` and never deletes or resets the
+database automatically.

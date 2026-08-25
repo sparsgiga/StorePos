@@ -8,7 +8,7 @@ public sealed record CreateProductAndAddToSaleCommand(
     long SaleId,
     string ProductCode,
     string Name,
-    string? Barcode,
+    string Barcode,
     int MeasurementUnitId,
     decimal Quantity,
     decimal UnitPrice,

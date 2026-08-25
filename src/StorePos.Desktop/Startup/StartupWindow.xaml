@@ -1,0 +1,56 @@
+<Window x:Class="StorePos.Desktop.Startup.StartupWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="StorePos"
+        Width="390"
+        Height="190"
+        ResizeMode="NoResize"
+        ShowInTaskbar="True"
+        WindowStartupLocation="CenterScreen"
+        WindowStyle="None">
+    <Border Padding="28"
+            Background="White"
+            BorderBrush="#202B3C"
+            BorderThickness="1"
+            CornerRadius="6">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <TextBlock FontSize="24"
+                       FontWeight="SemiBold"
+                       Text="StorePos" />
+
+            <StackPanel Grid.Row="1" VerticalAlignment="Center">
+                <TextBlock x:Name="StatusText"
+                           HorizontalAlignment="Center"
+                           Text="სერვისთან დაკავშირება..."
+                           TextAlignment="Center"
+                           TextWrapping="Wrap" />
+                <ProgressBar x:Name="LoadingIndicator"
+                             Height="5"
+                             Margin="0,18,0,0"
+                             IsIndeterminate="True" />
+            </StackPanel>
+
+            <StackPanel x:Name="FailureActions"
+                        Grid.Row="2"
+                        HorizontalAlignment="Center"
+                        Orientation="Horizontal"
+                        Visibility="Collapsed">
+                <Button MinWidth="110"
+                        Margin="0,0,10,0"
+                        Padding="12,5"
+                        Click="OnRetryClick"
+                        Content="თავიდან ცდა" />
+                <Button MinWidth="90"
+                        Padding="12,5"
+                        Click="OnCloseClick"
+                        Content="დახურვა" />
+            </StackPanel>
+        </Grid>
+    </Border>
+</Window>

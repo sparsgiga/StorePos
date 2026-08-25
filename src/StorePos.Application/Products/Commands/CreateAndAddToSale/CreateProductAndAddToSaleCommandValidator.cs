@@ -19,10 +19,12 @@ public sealed class CreateProductAndAddToSaleCommandValidator
             .NotEmpty()
             .MaximumLength(Product.NameMaxLength);
         RuleFor(command => command.Barcode)
+            .NotEmpty()
             .MaximumLength(Product.BarcodeMaxLength);
         RuleFor(command => command.MeasurementUnitId).GreaterThan(0);
         RuleFor(command => command.Quantity).GreaterThan(0);
-        RuleFor(command => command.UnitPrice).GreaterThanOrEqualTo(0);
+        RuleFor(command => command.UnitPrice)
+            .GreaterThanOrEqualTo(Product.MinimumPrice);
         RuleFor(command => command.Comment)
             .MaximumLength(SaleItem.CommentMaxLength);
     }

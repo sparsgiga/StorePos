@@ -4,6 +4,7 @@ namespace StorePos.Domain.Aggregates.Sale;
 
 public sealed class SaleItem : AuditableEntity<long>
 {
+    public const decimal MinimumUnitPrice = 0.00001m;
     public const int ProductCodeMaxLength = 50;
     public const int BarcodeMaxLength = 100;
     public const int ProductNameMaxLength = 300;
@@ -167,11 +168,11 @@ public sealed class SaleItem : AuditableEntity<long>
                 "Quantity must be greater than zero.");
         }
 
-        if (unitPrice < 0)
+        if (unitPrice < MinimumUnitPrice)
         {
             throw new ArgumentOutOfRangeException(
                 nameof(unitPrice),
-                "Unit price cannot be negative.");
+                $"Unit price must be at least {MinimumUnitPrice}.");
         }
 
         if (normalizedComment?.Length > CommentMaxLength)

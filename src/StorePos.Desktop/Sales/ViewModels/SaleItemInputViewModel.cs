@@ -9,6 +9,7 @@ namespace StorePos.Desktop.Sales.ViewModels;
 
 public sealed class SaleItemInputViewModel : ObservableObject
 {
+    private const decimal MinimumUnitPrice = 0.00001m;
     private readonly Ean13BarcodeGenerator _barcodeGenerator = new();
     private string? _productName;
     private string _quantity = string.Empty;
@@ -115,7 +116,13 @@ public sealed class SaleItemInputViewModel : ObservableObject
     public string? Barcode
     {
         get => _barcode;
-        set => SetProperty(ref _barcode, value);
+        set
+        {
+            if (SetProperty(ref _barcode, value))
+            {
+                UpdateIsComplete();
+            }
+        }
     }
 
     public string? CatalogMessage
@@ -281,6 +288,11 @@ public sealed class SaleItemInputViewModel : ObservableObject
         if (defaults.DefaultMeasurementUnitId.HasValue && SelectedMeasurementUnit is null)
         {
             CatalogMessage = "ნაგულისხმევი საზომი ერთეული აქტიურ სიაში ვერ მოიძებნა.";
+        }
+
+        if (string.IsNullOrWhiteSpace(Barcode))
+        {
+            GenerateBarcode(clearMessageOnSuccess: false);
         }
 
         IsLoadingCatalogDefaults = false;
@@ -480,26 +492,35 @@ public sealed class SaleItemInputViewModel : ObservableObject
                      DecimalInputParser.TryParse(Quantity, out var quantity) &&
                      quantity > 0 &&
                      DecimalInputParser.TryParse(UnitPrice, out var unitPrice) &&
-                     unitPrice >= 0 &&
+                     unitPrice >= MinimumUnitPrice &&
                      DecimalInputParser.TryParse(LineTotal, out var lineTotal) &&
-                     lineTotal >= 0;
+                     lineTotal > 0;
         var normalizedCode = ProductCode.Trim();
         var hasValidProductCode = normalizedCode.Length is > 0 and <= 50 &&
                                   normalizedCode.All(character =>
                                       character is >= '0' and <= '9');
+        var hasValidBarcode = !string.IsNullOrWhiteSpace(Barcode) &&
+                              Barcode.Trim().Length <= 100;
         CanSubmit = IsComplete &&
                     (!SaveToCatalog ||
                      !IsLoadingCatalogDefaults &&
                      SelectedMeasurementUnit is not null &&
-                     hasValidProductCode);
+                     hasValidProductCode &&
+                     hasValidBarcode);
     }
 
     private void GenerateBarcode()
+        => GenerateBarcode(clearMessageOnSuccess: true);
+
+    private void GenerateBarcode(bool clearMessageOnSuccess)
     {
         try
         {
             Barcode = _barcodeGenerator.Generate(ProductCode);
-            CatalogMessage = null;
+            if (clearMessageOnSuccess)
+            {
+                CatalogMessage = null;
+            }
         }
         catch (ArgumentException exception)
         {

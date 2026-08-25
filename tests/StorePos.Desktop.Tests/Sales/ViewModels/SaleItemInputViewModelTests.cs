@@ -48,7 +48,7 @@ public sealed class SaleItemInputViewModelTests
     }
 
     [Fact]
-    public void SaveToCatalog_RequiresMeasurementUnit()
+    public void SaveToCatalog_RequiresMeasurementUnitAndBarcode()
     {
         var input = new SaleItemInputViewModel
         {
@@ -64,8 +64,26 @@ public sealed class SaleItemInputViewModelTests
         input.LoadMeasurementUnits([new MeasurementUnitDto(1, "Piece", "pc", null)]);
         input.ProductCode = "10526";
 
+        Assert.False(input.CanSubmit);
+
+        input.Barcode = "0000000105262";
+
         Assert.True(input.CanSubmit);
         Assert.Equal(1, input.SelectedMeasurementUnit?.Id);
+    }
+
+    [Fact]
+    public void ManualItem_DoesNotRequireBarcode()
+    {
+        var input = new SaleItemInputViewModel
+        {
+            ProductName = "Cement",
+            Quantity = "1",
+            UnitPrice = "2"
+        };
+
+        Assert.True(input.CanSubmit);
+        Assert.Null(input.Barcode);
     }
 
     [Fact]
@@ -84,6 +102,44 @@ public sealed class SaleItemInputViewModelTests
 
         Assert.Equal("20000", input.ProductCode);
         Assert.Equal(24, input.SelectedMeasurementUnit?.Id);
+        Assert.Equal("0000000200004", input.Barcode);
+    }
+
+    [Fact]
+    public void CreationDefaults_GeneratesBarcodeFromSuggestedCodeWhenEmpty()
+    {
+        var input = new SaleItemInputViewModel();
+
+        input.ApplyCreationDefaults(new ProductCreationDefaultsDto(
+            "10525", null, null, null, null));
+
+        Assert.Equal("10525", input.ProductCode);
+        Assert.Equal("0000000105255", input.Barcode);
+    }
+
+    [Fact]
+    public void CreationDefaults_DoesNotOverwriteScannedBarcode()
+    {
+        var input = new SaleItemInputViewModel();
+        input.PrepareManualFallback("4860123456789", isBarcode: true);
+
+        input.ApplyCreationDefaults(new ProductCreationDefaultsDto(
+            "10525", null, null, null, null));
+
+        Assert.Equal("10525", input.ProductCode);
+        Assert.Equal("4860123456789", input.Barcode);
+    }
+
+    [Fact]
+    public void CreationDefaults_InvalidProductCodeDoesNotGenerateBarcode()
+    {
+        var input = new SaleItemInputViewModel { ProductCode = "1234567890123" };
+
+        input.ApplyCreationDefaults(new ProductCreationDefaultsDto(
+            "10525", null, null, null, null));
+
+        Assert.Null(input.Barcode);
+        Assert.NotNull(input.CatalogMessage);
     }
 
     [Fact]

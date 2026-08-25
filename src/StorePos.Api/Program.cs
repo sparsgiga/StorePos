@@ -1,6 +1,7 @@
 using StorePos.Application;
 using StorePos.Api.ErrorHandling;
 using StorePos.Persistence;
+using StorePos.Persistence.Initialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -15,7 +16,10 @@ builder.Services.AddExceptionHandler<ApiExceptionHandler>();
 
 var app = builder.Build();
 
+await app.Services.ApplyDatabaseMigrationsAsync();
+
 app.UseExceptionHandler();
+app.MapGet("/health", () => Results.Ok(new { status = "ready" }));
 app.MapControllers();
 
-app.Run();
+await app.RunAsync();

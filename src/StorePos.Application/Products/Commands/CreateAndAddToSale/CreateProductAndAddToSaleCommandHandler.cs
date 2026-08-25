@@ -36,9 +36,7 @@ public sealed class CreateProductAndAddToSaleCommandHandler(
             return null;
         }
 
-        var barcode = string.IsNullOrWhiteSpace(request.Barcode)
-            ? null
-            : request.Barcode.Trim();
+        var barcode = request.Barcode.Trim();
         var productCode = request.ProductCode.Trim();
 
         if (await productRepository.GetByCodeAsync(productCode, cancellationToken) is not null)
@@ -46,8 +44,7 @@ public sealed class CreateProductAndAddToSaleCommandHandler(
             throw new ProductCodeConflictException(productCode);
         }
 
-        if (barcode is not null &&
-            await productRepository.GetByBarcodeAsync(barcode, cancellationToken) is not null)
+        if (await productRepository.GetByBarcodeAsync(barcode, cancellationToken) is not null)
         {
             throw new ProductBarcodeConflictException(barcode);
         }

@@ -283,7 +283,7 @@
                                                      Text="{Binding DataContext.ManualItemInput.ProductCode, RelativeSource={RelativeSource AncestorType=UserControl}, UpdateSourceTrigger=PropertyChanged}" />
                                         </StackPanel>
                                         <StackPanel Grid.Column="2" Margin="0,0,6,0">
-                                            <TextBlock Margin="0,0,0,2" FontSize="11" Text="შტრიხკოდი (არასავალდებულო)" />
+                                            <TextBlock Margin="0,0,0,2" FontSize="11" Text="შტრიხკოდი" />
                                             <Grid>
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="*" />

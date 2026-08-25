@@ -3,7 +3,7 @@ namespace StorePos.Desktop.Sales.Models;
 public sealed record CreateProductAndAddSaleItemRequest(
     string ProductCode,
     string Name,
-    string? Barcode,
+    string Barcode,
     int MeasurementUnitId,
     decimal Quantity,
     decimal UnitPrice,

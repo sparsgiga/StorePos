@@ -260,7 +260,7 @@ public sealed class SalesWorkspaceViewModel : ObservableObject, IDisposable
                     new CreateProductAndAddSaleItemRequest(
                         ManualItemInput.ProductCode.Trim(),
                         productName,
-                        ManualItemInput.Barcode,
+                        ManualItemInput.Barcode!.Trim(),
                         unit.Id,
                         quantity,
                         unitPrice,

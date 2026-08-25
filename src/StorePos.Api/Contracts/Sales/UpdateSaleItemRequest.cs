@@ -12,7 +12,7 @@ public sealed class UpdateSaleItemRequest
     [Range(typeof(decimal), "0.00001", "9999999999999.99999")]
     public decimal Quantity { get; init; }
 
-    [Range(typeof(decimal), "0", "9999999999999.99999")]
+    [Range(typeof(decimal), "0.00001", "9999999999999.99999")]
     public decimal UnitPrice { get; init; }
 
     [StringLength(SaleItem.CommentMaxLength)]
