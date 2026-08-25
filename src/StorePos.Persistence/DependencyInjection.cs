@@ -9,6 +9,7 @@ using StorePos.Domain.Aggregates.User;
 using StorePos.Domain.Interfaces;
 using StorePos.Persistence.Context;
 using StorePos.Persistence.Repositories;
+using StorePos.Persistence.Queries;
 using StorePos.Persistence.Services;
 
 namespace StorePos.Persistence;
@@ -29,6 +30,7 @@ public static class DependencyInjection
         services.AddScoped<ISaleRepository, SaleRepository>();
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<ISaleNumberGenerator, SaleNumberGenerator>();
+        services.AddScoped<ISalesReadService, SalesReadService>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.TryAddSingleton(TimeProvider.System);
 

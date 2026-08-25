@@ -24,4 +24,7 @@ public static class DecimalInputParser
             CultureInfo.InvariantCulture,
             out value);
     }
+
+    public static string Format(decimal value)
+        => value.ToString("0.#####", CultureInfo.InvariantCulture);
 }

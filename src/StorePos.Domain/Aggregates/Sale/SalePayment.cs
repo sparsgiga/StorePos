@@ -5,6 +5,8 @@ namespace StorePos.Domain.Aggregates.Sale;
 
 public sealed class SalePayment : AuditableEntity<long>
 {
+    internal const int AmountScale = 5;
+
     private SalePayment()
     {
     }
@@ -23,5 +25,24 @@ public sealed class SalePayment : AuditableEntity<long>
     public decimal Amount { get; private set; }
 
     internal static SalePayment Create(long saleId, PaymentType paymentType, decimal amount)
-        => new(saleId, paymentType, amount);
+    {
+        if (!Enum.IsDefined(paymentType))
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(paymentType),
+                "Payment type is not supported.");
+        }
+
+        if (amount < 0)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(amount),
+                "Payment amount cannot be negative.");
+        }
+
+        return new SalePayment(saleId, paymentType, RoundAmount(amount));
+    }
+
+    internal static decimal RoundAmount(decimal amount)
+        => decimal.Round(amount, AmountScale, MidpointRounding.AwayFromZero);
 }

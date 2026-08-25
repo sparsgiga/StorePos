@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
 using StorePos.Desktop.Sales.ViewModels;
@@ -48,6 +49,29 @@ public partial class SalesWorkspaceView : UserControl
                 productNameTextBox?.SelectAll();
             },
             DispatcherPriority.Input);
+    }
+
+    private void OnSaleItemsPreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        if (DataContext is not SalesWorkspaceViewModel viewModel)
+        {
+            return;
+        }
+
+        var command = e.Key switch
+        {
+            Key.F2 => viewModel.EditSelectedItemCommand,
+            Key.Delete => viewModel.RemoveSelectedItemCommand,
+            _ => null
+        };
+
+        if (command?.CanExecute(null) != true)
+        {
+            return;
+        }
+
+        command.Execute(null);
+        e.Handled = true;
     }
 
     private static T? FindByTag<T>(DependencyObject parent, object tag)

@@ -23,17 +23,17 @@ public sealed class SaleConfiguration : IEntityTypeConfiguration<Sale>
             .IsRequired();
 
         builder.Property(x => x.CustomerName)
-            .HasMaxLength(300);
+            .HasMaxLength(Sale.CustomerNameMaxLength);
 
         builder.Property(x => x.CustomerIdentificationNumber)
-            .HasMaxLength(50);
+            .HasMaxLength(Sale.CustomerIdentificationNumberMaxLength);
 
         builder.Property(x => x.TotalAmount)
             .HasPrecision(18, 5)
             .IsRequired();
 
         builder.Property(x => x.Comment)
-            .HasMaxLength(4000);
+            .HasMaxLength(Sale.CommentMaxLength);
 
         builder.Property(x => x.DateCreated).HasColumnType("datetime2").IsRequired();
         builder.Property(x => x.DateUpdated).HasColumnType("datetime2");

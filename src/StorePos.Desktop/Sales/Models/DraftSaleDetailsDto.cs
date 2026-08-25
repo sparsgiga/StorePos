@@ -6,5 +6,6 @@ public sealed record DraftSaleDetailsDto(
     decimal TotalAmount,
     DateTime DateCreated,
     string? CustomerName,
+    string? CustomerIdentificationNumber,
     string? Comment,
     IReadOnlyList<DraftSaleItemDto> Items);

@@ -6,6 +6,9 @@ namespace StorePos.Desktop.Sales.ViewModels;
 public sealed class SaleTabViewModel : ObservableObject
 {
     private decimal _totalAmount;
+    private string? _customerName;
+    private string? _customerIdentificationNumber;
+    private string? _comment;
 
     public SaleTabViewModel(
         long id,
@@ -13,13 +16,17 @@ public sealed class SaleTabViewModel : ObservableObject
         decimal totalAmount,
         DateTime dateCreated,
         string? customerName,
+        string? customerIdentificationNumber = null,
+        string? comment = null,
         bool isDetailsLoaded = false)
     {
         Id = id;
         SaleNumber = saleNumber;
         _totalAmount = totalAmount;
         DateCreated = dateCreated;
-        CustomerName = customerName;
+        _customerName = customerName;
+        _customerIdentificationNumber = customerIdentificationNumber;
+        _comment = comment;
         IsDetailsLoaded = isDetailsLoaded;
     }
 
@@ -35,7 +42,23 @@ public sealed class SaleTabViewModel : ObservableObject
 
     public DateTime DateCreated { get; }
 
-    public string? CustomerName { get; }
+    public string? CustomerName
+    {
+        get => _customerName;
+        set => SetProperty(ref _customerName, value);
+    }
+
+    public string? CustomerIdentificationNumber
+    {
+        get => _customerIdentificationNumber;
+        set => SetProperty(ref _customerIdentificationNumber, value);
+    }
+
+    public string? Comment
+    {
+        get => _comment;
+        set => SetProperty(ref _comment, value);
+    }
 
     public bool IsDetailsLoaded { get; private set; }
 
@@ -43,6 +66,9 @@ public sealed class SaleTabViewModel : ObservableObject
 
     public void ApplyDetails(
         decimal totalAmount,
+        string? customerName,
+        string? customerIdentificationNumber,
+        string? comment,
         IEnumerable<SaleItemViewModel> items)
     {
         Items.Clear();
@@ -52,7 +78,20 @@ public sealed class SaleTabViewModel : ObservableObject
         }
 
         TotalAmount = totalAmount;
+        CustomerName = customerName;
+        CustomerIdentificationNumber = customerIdentificationNumber;
+        Comment = comment;
         IsDetailsLoaded = true;
+    }
+
+    public void ApplyInfo(
+        string? customerName,
+        string? customerIdentificationNumber,
+        string? comment)
+    {
+        CustomerName = customerName;
+        CustomerIdentificationNumber = customerIdentificationNumber;
+        Comment = comment;
     }
 
     public void AddItem(SaleItemViewModel item, decimal totalAmount)
@@ -60,5 +99,26 @@ public sealed class SaleTabViewModel : ObservableObject
         Items.Add(item);
         TotalAmount = totalAmount;
         IsDetailsLoaded = true;
+    }
+
+    public void ApplyItemUpdate(
+        long saleItemId,
+        string productName,
+        decimal quantity,
+        decimal unitPrice,
+        decimal lineTotal,
+        string? comment,
+        decimal totalAmount)
+    {
+        var item = Items.Single(existingItem => existingItem.Id == saleItemId);
+        item.ApplyUpdate(productName, quantity, unitPrice, lineTotal, comment);
+        TotalAmount = totalAmount;
+    }
+
+    public void ApplyItemRemoval(long saleItemId, decimal totalAmount)
+    {
+        var item = Items.Single(existingItem => existingItem.Id == saleItemId);
+        Items.Remove(item);
+        TotalAmount = totalAmount;
     }
 }

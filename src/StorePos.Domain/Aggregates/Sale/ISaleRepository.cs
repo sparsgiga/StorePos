@@ -13,7 +13,15 @@ public interface ISaleRepository :
         long saleId,
         CancellationToken cancellationToken = default);
 
+    Task<Sale?> GetDraftForInfoUpdateAsync(
+        long saleId,
+        CancellationToken cancellationToken = default);
+
     Task<Sale?> GetDraftDetailsAsync(
+        long saleId,
+        CancellationToken cancellationToken = default);
+
+    Task<Sale?> GetCompletedForReopenAsync(
         long saleId,
         CancellationToken cancellationToken = default);
 }

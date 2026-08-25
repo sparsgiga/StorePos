@@ -43,6 +43,7 @@ public sealed class GetDraftSaleDetailsQueryHandler(ISaleRepository saleReposito
             sale.TotalAmount,
             sale.DateCreated,
             sale.CustomerName,
+            sale.CustomerIdentificationNumber,
             sale.Comment,
             items);
     }

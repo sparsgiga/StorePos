@@ -6,5 +6,6 @@ public sealed record DraftSaleDetailsModel(
     decimal TotalAmount,
     DateTime DateCreated,
     string? CustomerName,
+    string? CustomerIdentificationNumber,
     string? Comment,
     IReadOnlyList<DraftSaleItemModel> Items);

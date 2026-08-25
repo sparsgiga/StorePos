@@ -1,4 +1,5 @@
 using StorePos.Domain.Aggregates.Sale;
+using StorePos.Domain.Enums;
 
 namespace StorePos.Domain.Tests.Sales;
 
@@ -40,7 +41,10 @@ public sealed class SaleManualItemTests
     public void AddManualItem_CompletedSale_Throws()
     {
         var sale = Sale.Create("20260824-0001");
-        sale.Complete(DateTime.UtcNow);
+        sale.AddManualItem("არსებული პროდუქტი", 1m, 1m);
+        sale.Complete(
+            [new SalePaymentAllocation(PaymentType.Cash, 1m)],
+            DateTime.UtcNow);
 
         Assert.Throws<InvalidOperationException>(() =>
             sale.AddManualItem("მუხლი", 1m, 1m));

@@ -22,9 +22,17 @@ public sealed class SaleRepository(StorePosDbContext context)
         CancellationToken cancellationToken = default)
         => Entities
             .Include(sale => sale.Items)
+            .Include(sale => sale.Payments)
             .SingleOrDefaultAsync(
                 sale => sale.Id == saleId && sale.Status == SaleStatus.Draft,
                 cancellationToken);
+
+    public Task<Sale?> GetDraftForInfoUpdateAsync(
+        long saleId,
+        CancellationToken cancellationToken = default)
+        => Entities.SingleOrDefaultAsync(
+            sale => sale.Id == saleId && sale.Status == SaleStatus.Draft,
+            cancellationToken);
 
     public Task<Sale?> GetDraftDetailsAsync(
         long saleId,
@@ -34,5 +42,15 @@ public sealed class SaleRepository(StorePosDbContext context)
             .Include(sale => sale.Items)
             .SingleOrDefaultAsync(
                 sale => sale.Id == saleId && sale.Status == SaleStatus.Draft,
+                cancellationToken);
+
+    public Task<Sale?> GetCompletedForReopenAsync(
+        long saleId,
+        CancellationToken cancellationToken = default)
+        => Entities
+            .Include(sale => sale.Items)
+            .Include(sale => sale.Payments)
+            .SingleOrDefaultAsync(
+                sale => sale.Id == saleId && sale.Status == SaleStatus.Completed,
                 cancellationToken);
 }

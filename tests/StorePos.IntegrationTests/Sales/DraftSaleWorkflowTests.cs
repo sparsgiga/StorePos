@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using StorePos.Application.Sales.Commands.CreateDraft;
 using StorePos.Application.Sales.Queries.GetDrafts;
 using StorePos.Domain.Aggregates.Sale;
+using StorePos.Domain.Enums;
 using StorePos.Persistence;
 using StorePos.Persistence.Context;
 using StorePos.Persistence.Repositories;
@@ -29,7 +30,10 @@ public sealed class DraftSaleWorkflowTests
         await repository.AddAsync(secondDraft);
         await unitOfWork.SaveChangesAsync();
 
-        completedSale.Complete(DateTime.UtcNow);
+        completedSale.AddManualItem("პროდუქტი", 1m, 1m);
+        completedSale.Complete(
+            [new SalePaymentAllocation(PaymentType.Cash, 1m)],
+            DateTime.UtcNow);
         cancelledSale.Cancel(DateTime.UtcNow);
         await unitOfWork.SaveChangesAsync();
 

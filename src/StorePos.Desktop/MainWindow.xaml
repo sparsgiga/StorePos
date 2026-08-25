@@ -3,13 +3,50 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:historyViews="clr-namespace:StorePos.Desktop.History.Views"
+        xmlns:historyViewModels="clr-namespace:StorePos.Desktop.History.ViewModels"
         xmlns:salesViews="clr-namespace:StorePos.Desktop.Sales.Views"
+        xmlns:salesViewModels="clr-namespace:StorePos.Desktop.Sales.ViewModels"
         mc:Ignorable="d"
         Title="StorePos — გაყიდვები"
-        Height="720"
+        Height="680"
         Width="1100"
         MinHeight="520"
         MinWidth="820"
+        ResizeMode="CanResize"
+        ShowInTaskbar="True"
+        WindowState="Normal"
+        WindowStyle="SingleBorderWindow"
         WindowStartupLocation="CenterScreen">
-    <salesViews:SalesWorkspaceView />
+    <Window.Resources>
+        <DataTemplate DataType="{x:Type salesViewModels:SalesWorkspaceViewModel}">
+            <salesViews:SalesWorkspaceView />
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type historyViewModels:SalesHistoryViewModel}">
+            <historyViews:SalesHistoryView />
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type historyViewModels:SoldProductsViewModel}">
+            <historyViews:SoldProductsView />
+        </DataTemplate>
+    </Window.Resources>
+
+    <Grid Background="#F4F5F7">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <Border Grid.Row="0" Padding="14,9" Background="#202B3C">
+            <StackPanel Orientation="Horizontal">
+                <Button MinWidth="115" Margin="0,0,8,0" Padding="12,6"
+                        Command="{Binding ShowSalesCommand}" Content="გაყიდვები" />
+                <Button MinWidth="170" Margin="0,0,8,0" Padding="12,6"
+                        Command="{Binding ShowHistoryCommand}" Content="გაყიდვების ისტორია" />
+                <Button MinWidth="170" Padding="12,6"
+                        Command="{Binding ShowSoldProductsCommand}" Content="გაყიდული პროდუქცია" />
+            </StackPanel>
+        </Border>
+
+        <ContentControl Grid.Row="1" Content="{Binding CurrentPage}" />
+    </Grid>
 </Window>

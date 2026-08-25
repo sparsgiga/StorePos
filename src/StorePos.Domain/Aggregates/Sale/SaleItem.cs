@@ -28,14 +28,10 @@ public sealed class SaleItem : AuditableEntity<long>
         ProductId = productId;
         ProductCode = productCode;
         Barcode = barcode;
-        ProductName = productName;
         MeasurementUnitId = measurementUnitId;
         MeasurementUnitName = measurementUnitName;
-        Quantity = quantity;
-        UnitPrice = unitPrice;
-        LineTotal = quantity * unitPrice;
         IsManual = isManual;
-        Comment = note;
+        UpdateDetails(productName, quantity, unitPrice, note);
     }
 
     public long SaleId { get; private set; }
@@ -69,12 +65,37 @@ public sealed class SaleItem : AuditableEntity<long>
         decimal unitPrice,
         string? comment = null)
     {
-        if (string.IsNullOrWhiteSpace(productName))
+        return new SaleItem(
+            saleId,
+            productId: null,
+            productCode: null,
+            barcode: null,
+            productName,
+            measurementUnitId: null,
+            measurementUnitName: null,
+            quantity,
+            unitPrice,
+            isManual: true,
+            comment);
+    }
+
+    internal void UpdateDetails(
+        string productName,
+        decimal quantity,
+        decimal unitPrice,
+        string? comment)
+    {
+        var normalizedProductName = productName?.Trim();
+        var normalizedComment = string.IsNullOrWhiteSpace(comment)
+            ? null
+            : comment.Trim();
+
+        if (string.IsNullOrWhiteSpace(normalizedProductName))
         {
             throw new ArgumentException("Product name is required.", nameof(productName));
         }
 
-        if (productName.Length > ProductNameMaxLength)
+        if (normalizedProductName.Length > ProductNameMaxLength)
         {
             throw new ArgumentException(
                 $"Product name cannot exceed {ProductNameMaxLength} characters.",
@@ -95,24 +116,17 @@ public sealed class SaleItem : AuditableEntity<long>
                 "Unit price cannot be negative.");
         }
 
-        if (comment?.Length > CommentMaxLength)
+        if (normalizedComment?.Length > CommentMaxLength)
         {
             throw new ArgumentException(
                 $"Comment cannot exceed {CommentMaxLength} characters.",
                 nameof(comment));
         }
 
-        return new SaleItem(
-            saleId,
-            productId: null,
-            productCode: null,
-            barcode: null,
-            productName,
-            measurementUnitId: null,
-            measurementUnitName: null,
-            quantity,
-            unitPrice,
-            isManual: true,
-            comment);
+        ProductName = normalizedProductName;
+        Quantity = quantity;
+        UnitPrice = unitPrice;
+        LineTotal = quantity * unitPrice;
+        Comment = normalizedComment;
     }
 }

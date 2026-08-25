@@ -1,8 +1,10 @@
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Windows.Input;
 using StorePos.Desktop.Api;
 using StorePos.Desktop.Common;
+using StorePos.Desktop.Sales.Dialogs;
 using StorePos.Desktop.Sales.Models;
 
 namespace StorePos.Desktop.Sales.ViewModels;
@@ -10,30 +12,45 @@ namespace StorePos.Desktop.Sales.ViewModels;
 public sealed class SalesWorkspaceViewModel : ObservableObject, IDisposable
 {
     private readonly IStorePosApiClient _apiClient;
+    private readonly ISalesDialogService _dialogService;
     private readonly CancellationTokenSource _lifetimeCancellation = new();
     private readonly AsyncRelayCommand _newSaleCommand;
     private readonly AsyncRelayCommand _addManualItemCommand;
+    private readonly AsyncRelayCommand _removeSelectedItemCommand;
+    private readonly AsyncRelayCommand _cancelSaleCommand;
+    private readonly RelayCommand _editCustomerCommand;
+    private readonly RelayCommand _editSelectedItemCommand;
+    private readonly RelayCommand _completeSaleCommand;
     private CancellationTokenSource? _detailsCancellation;
     private SaleTabViewModel? _selectedSale;
-    private string? _manualProductName;
-    private string _manualQuantity = "1";
-    private string _manualUnitPrice = "0";
-    private string? _manualComment;
+    private SaleItemViewModel? _selectedItem;
     private string? _errorMessage;
     private bool _isBusy;
 
-    public SalesWorkspaceViewModel(IStorePosApiClient apiClient)
+    public SalesWorkspaceViewModel(
+        IStorePosApiClient apiClient,
+        ISalesDialogService dialogService)
     {
         _apiClient = apiClient;
+        _dialogService = dialogService;
+        ManualItemInput.PropertyChanged += OnManualItemInputPropertyChanged;
+
         _newSaleCommand = new AsyncRelayCommand(CreateDraftSaleAsync, () => !IsBusy);
-        _addManualItemCommand = new AsyncRelayCommand(
-            AddManualItemAsync,
-            () => !IsBusy && SelectedSale?.IsDetailsLoaded == true);
+        _addManualItemCommand = new AsyncRelayCommand(AddManualItemAsync, CanAddManualItem);
+        _removeSelectedItemCommand = new AsyncRelayCommand(
+            RemoveSelectedItemAsync,
+            CanModifySelectedItem);
+        _cancelSaleCommand = new AsyncRelayCommand(CancelSaleAsync, CanCancelSale);
+        _editCustomerCommand = new RelayCommand(EditCustomer, CanEditCustomer);
+        _editSelectedItemCommand = new RelayCommand(EditSelectedItem, CanModifySelectedItem);
+        _completeSaleCommand = new RelayCommand(CompleteSale, CanCompleteSale);
     }
 
     public event EventHandler? ProductNameFocusRequested;
 
     public ObservableCollection<SaleTabViewModel> OpenSales { get; } = [];
+
+    public SaleItemInputViewModel ManualItemInput { get; } = new();
 
     public SaleTabViewModel? SelectedSale
     {
@@ -45,33 +62,22 @@ public sealed class SalesWorkspaceViewModel : ObservableObject, IDisposable
                 return;
             }
 
-            _addManualItemCommand.NotifyCanExecuteChanged();
+            SelectedItem = null;
+            NotifyCommandStates();
             _ = LoadSaleDetailsAsync(value);
         }
     }
 
-    public string? ManualProductName
+    public SaleItemViewModel? SelectedItem
     {
-        get => _manualProductName;
-        set => SetProperty(ref _manualProductName, value);
-    }
-
-    public string ManualQuantity
-    {
-        get => _manualQuantity;
-        set => SetProperty(ref _manualQuantity, value);
-    }
-
-    public string ManualUnitPrice
-    {
-        get => _manualUnitPrice;
-        set => SetProperty(ref _manualUnitPrice, value);
-    }
-
-    public string? ManualComment
-    {
-        get => _manualComment;
-        set => SetProperty(ref _manualComment, value);
+        get => _selectedItem;
+        set
+        {
+            if (SetProperty(ref _selectedItem, value))
+            {
+                NotifyCommandStates();
+            }
+        }
     }
 
     public string? ErrorMessage
@@ -87,8 +93,7 @@ public sealed class SalesWorkspaceViewModel : ObservableObject, IDisposable
         {
             if (SetProperty(ref _isBusy, value))
             {
-                _newSaleCommand.NotifyCanExecuteChanged();
-                _addManualItemCommand.NotifyCanExecuteChanged();
+                NotifyCommandStates();
             }
         }
     }
@@ -97,7 +102,19 @@ public sealed class SalesWorkspaceViewModel : ObservableObject, IDisposable
 
     public ICommand AddManualItemCommand => _addManualItemCommand;
 
-    public async Task InitializeAsync()
+    public ICommand EditCustomerCommand => _editCustomerCommand;
+
+    public ICommand EditSelectedItemCommand => _editSelectedItemCommand;
+
+    public ICommand RemoveSelectedItemCommand => _removeSelectedItemCommand;
+
+    public ICommand CompleteSaleCommand => _completeSaleCommand;
+
+    public ICommand CancelSaleCommand => _cancelSaleCommand;
+
+    public Task InitializeAsync() => RefreshAsync();
+
+    public async Task RefreshAsync(long? preferredSaleId = null)
     {
         try
         {
@@ -106,6 +123,7 @@ public sealed class SalesWorkspaceViewModel : ObservableObject, IDisposable
 
             var drafts = await _apiClient.GetDraftSalesAsync(_lifetimeCancellation.Token);
             var loadedTabs = drafts.Select(Map).ToArray();
+            var selectedSaleId = preferredSaleId ?? SelectedSale?.Id;
 
             OpenSales.Clear();
             foreach (var tab in loadedTabs)
@@ -113,7 +131,10 @@ public sealed class SalesWorkspaceViewModel : ObservableObject, IDisposable
                 OpenSales.Add(tab);
             }
 
-            SelectedSale = OpenSales.FirstOrDefault();
+            SelectedSale = selectedSaleId.HasValue
+                ? OpenSales.FirstOrDefault(sale => sale.Id == selectedSaleId.Value)
+                  ?? OpenSales.FirstOrDefault()
+                : OpenSales.FirstOrDefault();
         }
         catch (OperationCanceledException) when (_lifetimeCancellation.IsCancellationRequested)
         {
@@ -131,6 +152,7 @@ public sealed class SalesWorkspaceViewModel : ObservableObject, IDisposable
 
     public void Dispose()
     {
+        ManualItemInput.PropertyChanged -= OnManualItemInputPropertyChanged;
         _detailsCancellation?.Cancel();
         _detailsCancellation?.Dispose();
         _lifetimeCancellation.Cancel();
@@ -176,27 +198,13 @@ public sealed class SalesWorkspaceViewModel : ObservableObject, IDisposable
     private async Task AddManualItemAsync()
     {
         var sale = SelectedSale;
-        if (sale is null)
+        if (sale is null ||
+            !ManualItemInput.TryGetValues(
+                out var productName,
+                out var quantity,
+                out var unitPrice))
         {
-            return;
-        }
-
-        if (string.IsNullOrWhiteSpace(ManualProductName))
-        {
-            ErrorMessage = "შეიყვანეთ პროდუქტის დასახელება.";
-            ProductNameFocusRequested?.Invoke(this, EventArgs.Empty);
-            return;
-        }
-
-        if (!DecimalInputParser.TryParse(ManualQuantity, out var quantity) || quantity <= 0)
-        {
-            ErrorMessage = "რაოდენობა უნდა იყოს ნულზე მეტი.";
-            return;
-        }
-
-        if (!DecimalInputParser.TryParse(ManualUnitPrice, out var unitPrice) || unitPrice < 0)
-        {
-            ErrorMessage = "ფასი არ შეიძლება იყოს უარყოფითი.";
+            ErrorMessage = "შეავსეთ დასახელება და ორი სწორი რიცხვითი მნიშვნელობა.";
             return;
         }
 
@@ -208,10 +216,10 @@ public sealed class SalesWorkspaceViewModel : ObservableObject, IDisposable
             var result = await _apiClient.AddManualSaleItemAsync(
                 sale.Id,
                 new AddManualSaleItemRequest(
-                    ManualProductName,
+                    productName,
                     quantity,
                     unitPrice,
-                    ManualComment),
+                    ManualItemInput.Comment),
                 _lifetimeCancellation.Token);
 
             sale.AddItem(
@@ -221,15 +229,11 @@ public sealed class SalesWorkspaceViewModel : ObservableObject, IDisposable
                     result.Quantity,
                     result.UnitPrice,
                     result.LineTotal,
-                    IsManual: true,
+                    isManual: true,
                     result.Comment),
                 result.SaleTotalAmount);
 
-            ManualProductName = null;
-            ManualQuantity = "1";
-            ManualUnitPrice = "0";
-            ManualComment = null;
-
+            ManualItemInput.Reset();
             ProductNameFocusRequested?.Invoke(this, EventArgs.Empty);
         }
         catch (OperationCanceledException) when (_lifetimeCancellation.IsCancellationRequested)
@@ -246,6 +250,151 @@ public sealed class SalesWorkspaceViewModel : ObservableObject, IDisposable
         }
     }
 
+    private void EditCustomer()
+    {
+        var sale = SelectedSale;
+        if (sale is null)
+        {
+            return;
+        }
+
+        var result = _dialogService.ShowCustomerInfo(
+            sale,
+            _lifetimeCancellation.Token);
+
+        if (result is null)
+        {
+            return;
+        }
+
+        sale.ApplyInfo(
+            result.CustomerName,
+            result.CustomerIdentificationNumber,
+            result.Comment);
+        ErrorMessage = null;
+    }
+
+    private void EditSelectedItem()
+    {
+        var sale = SelectedSale;
+        var item = SelectedItem;
+        if (sale is null || item is null)
+        {
+            return;
+        }
+
+        var result = _dialogService.ShowEditItem(
+            sale.Id,
+            item,
+            _lifetimeCancellation.Token);
+
+        if (result is null)
+        {
+            return;
+        }
+
+        sale.ApplyItemUpdate(
+            result.SaleItemId,
+            result.ProductName,
+            result.Quantity,
+            result.UnitPrice,
+            result.LineTotal,
+            result.Comment,
+            result.SaleTotalAmount);
+        ErrorMessage = null;
+    }
+
+    private async Task RemoveSelectedItemAsync()
+    {
+        var sale = SelectedSale;
+        var item = SelectedItem;
+        if (sale is null || item is null || !_dialogService.ConfirmRemoveItem(item.ProductName))
+        {
+            return;
+        }
+
+        try
+        {
+            IsBusy = true;
+            ErrorMessage = null;
+
+            var result = await _apiClient.RemoveSaleItemAsync(
+                sale.Id,
+                item.Id,
+                _lifetimeCancellation.Token);
+
+            sale.ApplyItemRemoval(result.SaleItemId, result.SaleTotalAmount);
+            SelectedItem = null;
+        }
+        catch (OperationCanceledException) when (_lifetimeCancellation.IsCancellationRequested)
+        {
+        }
+        catch (Exception exception)
+        {
+            Trace.TraceError(exception.ToString());
+            ErrorMessage = "პროდუქტის წაშლა ვერ მოხერხდა. მონაცემები არ შეცვლილა.";
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    private void CompleteSale()
+    {
+        var sale = SelectedSale;
+        if (sale is null)
+        {
+            return;
+        }
+
+        var result = _dialogService.ShowCompleteSale(
+            sale,
+            _lifetimeCancellation.Token);
+
+        if (result is null)
+        {
+            return;
+        }
+
+        RemoveOpenSale(sale);
+        ErrorMessage = null;
+    }
+
+    private async Task CancelSaleAsync()
+    {
+        var sale = SelectedSale;
+        if (sale is null ||
+            !_dialogService.ConfirmCancelSale(sale.SaleNumber, sale.TotalAmount))
+        {
+            return;
+        }
+
+        try
+        {
+            IsBusy = true;
+            ErrorMessage = null;
+
+            await _apiClient.CancelSaleAsync(
+                sale.Id,
+                _lifetimeCancellation.Token);
+
+            RemoveOpenSale(sale);
+        }
+        catch (OperationCanceledException) when (_lifetimeCancellation.IsCancellationRequested)
+        {
+        }
+        catch (Exception exception)
+        {
+            Trace.TraceError(exception.ToString());
+            ErrorMessage = "გაყიდვის გაუქმება ვერ მოხერხდა. მონაცემები არ შეცვლილა.";
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
     private async Task LoadSaleDetailsAsync(SaleTabViewModel? sale)
     {
         _detailsCancellation?.Cancel();
@@ -254,7 +403,7 @@ public sealed class SalesWorkspaceViewModel : ObservableObject, IDisposable
 
         if (sale is null || sale.IsDetailsLoaded)
         {
-            _addManualItemCommand.NotifyCanExecuteChanged();
+            NotifyCommandStates();
             return;
         }
 
@@ -275,8 +424,10 @@ public sealed class SalesWorkspaceViewModel : ObservableObject, IDisposable
 
             sale.ApplyDetails(
                 details.TotalAmount,
+                details.CustomerName,
+                details.CustomerIdentificationNumber,
+                details.Comment,
                 details.Items.Select(Map));
-
             ErrorMessage = null;
         }
         catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
@@ -295,8 +446,64 @@ public sealed class SalesWorkspaceViewModel : ObservableObject, IDisposable
                 cancellation.Dispose();
             }
 
+            NotifyCommandStates();
+        }
+    }
+
+    private bool CanAddManualItem()
+        => !IsBusy &&
+           SelectedSale?.IsDetailsLoaded == true &&
+           ManualItemInput.IsComplete;
+
+    private bool CanEditCustomer()
+        => !IsBusy && SelectedSale?.IsDetailsLoaded == true;
+
+    private bool CanModifySelectedItem()
+        => !IsBusy &&
+           SelectedSale?.IsDetailsLoaded == true &&
+           SelectedItem is not null;
+
+    private bool CanCompleteSale()
+        => !IsBusy &&
+           SelectedSale?.IsDetailsLoaded == true &&
+           SelectedSale.Items.Count > 0;
+
+    private bool CanCancelSale()
+        => !IsBusy && SelectedSale?.IsDetailsLoaded == true;
+
+    private void OnManualItemInputPropertyChanged(
+        object? sender,
+        PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(SaleItemInputViewModel.IsComplete))
+        {
             _addManualItemCommand.NotifyCanExecuteChanged();
         }
+    }
+
+    private void NotifyCommandStates()
+    {
+        _newSaleCommand.NotifyCanExecuteChanged();
+        _addManualItemCommand.NotifyCanExecuteChanged();
+        _editCustomerCommand.NotifyCanExecuteChanged();
+        _editSelectedItemCommand.NotifyCanExecuteChanged();
+        _removeSelectedItemCommand.NotifyCanExecuteChanged();
+        _completeSaleCommand.NotifyCanExecuteChanged();
+        _cancelSaleCommand.NotifyCanExecuteChanged();
+    }
+
+    private void RemoveOpenSale(SaleTabViewModel sale)
+    {
+        var removedIndex = OpenSales.IndexOf(sale);
+        if (removedIndex < 0)
+        {
+            return;
+        }
+
+        OpenSales.RemoveAt(removedIndex);
+        SelectedSale = OpenSales.Count == 0
+            ? null
+            : OpenSales[Math.Min(removedIndex, OpenSales.Count - 1)];
     }
 
     private static SaleTabViewModel Map(DraftSaleDto sale)
