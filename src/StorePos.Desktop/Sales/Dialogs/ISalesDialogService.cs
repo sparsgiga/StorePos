@@ -5,7 +5,7 @@ namespace StorePos.Desktop.Sales.Dialogs;
 
 public interface ISalesDialogService
 {
-    UpdateDraftSaleInfoResponse? ShowCustomerInfo(
+    CustomerDialogResult? ShowCustomerInfo(
         SaleTabViewModel sale,
         CancellationToken cancellationToken = default);
 

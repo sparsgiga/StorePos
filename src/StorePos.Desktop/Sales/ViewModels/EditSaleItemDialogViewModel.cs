@@ -32,7 +32,8 @@ public sealed class EditSaleItemDialogViewModel : ObservableObject
             item.ProductName,
             item.Quantity,
             item.UnitPrice,
-            item.Comment);
+            item.Comment,
+            isProductNameReadOnly: !item.IsManual);
         Input.PropertyChanged += OnInputPropertyChanged;
 
         _saveCommand = new AsyncRelayCommand(SaveAsync, () => Input.IsComplete);

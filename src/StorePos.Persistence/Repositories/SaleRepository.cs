@@ -27,7 +27,7 @@ public sealed class SaleRepository(StorePosDbContext context)
                 sale => sale.Id == saleId && sale.Status == SaleStatus.Draft,
                 cancellationToken);
 
-    public Task<Sale?> GetDraftForInfoUpdateAsync(
+    public Task<Sale?> GetDraftForMetadataUpdateAsync(
         long saleId,
         CancellationToken cancellationToken = default)
         => Entities.SingleOrDefaultAsync(

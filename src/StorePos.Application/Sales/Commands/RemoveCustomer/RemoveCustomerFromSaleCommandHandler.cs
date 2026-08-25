@@ -2,37 +2,33 @@ using MediatR;
 using StorePos.Domain.Aggregates.Sale;
 using StorePos.Domain.Interfaces;
 
-namespace StorePos.Application.Sales.Commands.UpdateDraftInfo;
+namespace StorePos.Application.Sales.Commands.RemoveCustomer;
 
-public sealed class UpdateDraftSaleInfoCommandHandler(
+public sealed class RemoveCustomerFromSaleCommandHandler(
     ISaleRepository saleRepository,
     IUnitOfWork unitOfWork)
-    : IRequestHandler<UpdateDraftSaleInfoCommand, UpdateDraftSaleInfoResult?>
+    : IRequestHandler<RemoveCustomerFromSaleCommand, RemoveCustomerFromSaleResult?>
 {
-    public async Task<UpdateDraftSaleInfoResult?> Handle(
-        UpdateDraftSaleInfoCommand request,
+    public async Task<RemoveCustomerFromSaleResult?> Handle(
+        RemoveCustomerFromSaleCommand request,
         CancellationToken cancellationToken)
     {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(request.SaleId);
 
-        var sale = await saleRepository.GetDraftForInfoUpdateAsync(
+        var sale = await saleRepository.GetDraftForMetadataUpdateAsync(
             request.SaleId,
             cancellationToken);
-
         if (sale is null)
         {
             return null;
         }
 
-        sale.UpdateInfo(
-            request.CustomerName,
-            request.CustomerIdentificationNumber,
-            request.Comment);
-
+        sale.RemoveCustomer();
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return new UpdateDraftSaleInfoResult(
+        return new RemoveCustomerFromSaleResult(
             sale.Id,
+            sale.CustomerId,
             sale.CustomerName,
             sale.CustomerIdentificationNumber,
             sale.Comment);

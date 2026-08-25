@@ -10,6 +10,7 @@
              d:DesignWidth="1400">
     <UserControl.Resources>
         <common:DecimalDisplayConverter x:Key="DecimalDisplayConverter" />
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
         <Style x:Key="RightAlignedCellText" TargetType="TextBlock">
             <Setter Property="HorizontalAlignment" Value="Stretch" />
             <Setter Property="TextAlignment" Value="Right" />
@@ -101,6 +102,7 @@
                         <Grid Margin="12">
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
                                 <RowDefinition Height="*" />
                                 <RowDefinition Height="Auto" />
                             </Grid.RowDefinitions>
@@ -108,9 +110,87 @@
                             <Border Grid.Row="0"
                                     Margin="0,0,0,8"
                                     Padding="10"
+                                    Background="#EEF6FB"
+                                    BorderBrush="#B8D8EA"
+                                    BorderThickness="1"
+                                    CornerRadius="5">
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+
+                                    <StackPanel Grid.Column="0" Margin="0,0,8,0">
+                                        <TextBlock Margin="0,0,0,3"
+                                                   FontSize="11"
+                                                   FontWeight="SemiBold"
+                                                   Text="პროდუქტის ძებნა — შტრიხკოდი, კოდი ან დასახელება" />
+                                        <TextBox Tag="CatalogProductSearch"
+                                                 Padding="8,6"
+                                                 Text="{Binding DataContext.ProductSearch.Query, RelativeSource={RelativeSource AncestorType=UserControl}, UpdateSourceTrigger=PropertyChanged}">
+                                            <TextBox.InputBindings>
+                                                <KeyBinding Key="Enter" Command="{Binding DataContext.ProductSearch.EnterCommand, Source={x:Reference Root}}" />
+                                                <KeyBinding Key="Up" Command="{Binding DataContext.ProductSearch.MoveUpCommand, Source={x:Reference Root}}" />
+                                                <KeyBinding Key="Down" Command="{Binding DataContext.ProductSearch.MoveDownCommand, Source={x:Reference Root}}" />
+                                                <KeyBinding Key="Escape" Command="{Binding DataContext.ProductSearch.ClearCommand, Source={x:Reference Root}}" />
+                                            </TextBox.InputBindings>
+                                        </TextBox>
+                                    </StackPanel>
+
+                                    <Button Grid.Column="1"
+                                            MinWidth="105"
+                                            Padding="14,6"
+                                            VerticalAlignment="Bottom"
+                                            Command="{Binding DataContext.ProductSearch.AddSelectedCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                            Content="დამატება"
+                                            FontWeight="SemiBold" />
+
+                                    <ListBox Grid.Row="1"
+                                             Grid.ColumnSpan="2"
+                                             MaxHeight="155"
+                                             Margin="0,8,0,0"
+                                             ItemsSource="{Binding DataContext.ProductSearch.Results, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                             SelectedItem="{Binding DataContext.ProductSearch.SelectedProduct, RelativeSource={RelativeSource AncestorType=UserControl}, Mode=TwoWay}"
+                                             Visibility="{Binding DataContext.ProductSearch.HasResults, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                        <ListBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <Grid MinWidth="820" Margin="5,3">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="150" />
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="180" />
+                                                        <ColumnDefinition Width="120" />
+                                                        <ColumnDefinition Width="100" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBlock Grid.Column="0" Text="{Binding Code}" />
+                                                    <TextBlock Grid.Column="1" FontWeight="SemiBold" Text="{Binding Name}" />
+                                                    <TextBlock Grid.Column="2" Foreground="#5F6B7A" Text="{Binding Barcode, TargetNullValue=—}" />
+                                                    <TextBlock Grid.Column="3" Text="{Binding MeasurementUnitShortName, TargetNullValue=—}" />
+                                                    <TextBlock Grid.Column="4"
+                                                               HorizontalAlignment="Right"
+                                                               Text="{Binding Price, Converter={StaticResource DecimalDisplayConverter}}" />
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ListBox.ItemTemplate>
+                                    </ListBox>
+                                </Grid>
+                            </Border>
+
+                            <Border Grid.Row="1"
+                                    Margin="0,0,0,8"
+                                    Padding="10"
                                     Background="#F8F9FB"
                                     CornerRadius="5">
                                 <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="3*" />
                                         <ColumnDefinition Width="115" />
@@ -120,7 +200,13 @@
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
 
-                                    <StackPanel Grid.Column="0" Margin="0,0,8,0">
+                                    <CheckBox Grid.Row="0"
+                                              Grid.ColumnSpan="6"
+                                              Margin="0,0,0,8"
+                                              Content="პროდუქტის კატალოგში შენახვა"
+                                              IsChecked="{Binding DataContext.ManualItemInput.SaveToCatalog, RelativeSource={RelativeSource AncestorType=UserControl}}" />
+
+                                    <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,0,8,0">
                                         <TextBlock Margin="0,0,0,3" FontSize="11" Text="დასახელება" />
                                         <TextBox Tag="ManualProductName"
                                                  Padding="7,5"
@@ -128,45 +214,74 @@
                                                  Text="{Binding DataContext.ManualItemInput.ProductName, RelativeSource={RelativeSource AncestorType=UserControl}, UpdateSourceTrigger=PropertyChanged}" />
                                     </StackPanel>
 
-                                    <StackPanel Grid.Column="1" Margin="0,0,8,0">
+                                    <StackPanel Grid.Row="1" Grid.Column="1" Margin="0,0,8,0">
                                         <TextBlock Margin="0,0,0,3" FontSize="11" Text="რაოდენობა" />
                                         <TextBox Padding="7,5"
                                                  IsReadOnly="{Binding DataContext.ManualItemInput.IsQuantityReadOnly, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                  Text="{Binding DataContext.ManualItemInput.Quantity, RelativeSource={RelativeSource AncestorType=UserControl}, UpdateSourceTrigger=PropertyChanged}" />
                                     </StackPanel>
 
-                                    <StackPanel Grid.Column="2" Margin="0,0,8,0">
+                                    <StackPanel Grid.Row="1" Grid.Column="2" Margin="0,0,8,0">
                                         <TextBlock Margin="0,0,0,3" FontSize="11" Text="ფასი" />
                                         <TextBox Padding="7,5"
                                                  IsReadOnly="{Binding DataContext.ManualItemInput.IsUnitPriceReadOnly, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                  Text="{Binding DataContext.ManualItemInput.UnitPrice, RelativeSource={RelativeSource AncestorType=UserControl}, UpdateSourceTrigger=PropertyChanged}" />
                                     </StackPanel>
 
-                                    <StackPanel Grid.Column="3" Margin="0,0,8,0">
+                                    <StackPanel Grid.Row="1" Grid.Column="3" Margin="0,0,8,0">
                                         <TextBlock Margin="0,0,0,3" FontSize="11" Text="ჯამი" />
                                         <TextBox Padding="7,5"
                                                  IsReadOnly="{Binding DataContext.ManualItemInput.IsLineTotalReadOnly, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                  Text="{Binding DataContext.ManualItemInput.LineTotal, RelativeSource={RelativeSource AncestorType=UserControl}, UpdateSourceTrigger=PropertyChanged}" />
                                     </StackPanel>
 
-                                    <StackPanel Grid.Column="4" Margin="0,0,8,0">
+                                    <StackPanel Grid.Row="1" Grid.Column="4" Margin="0,0,8,0">
                                         <TextBlock Margin="0,0,0,3" FontSize="11" Text="კომენტარი" />
                                         <TextBox Padding="7,5"
                                                  MaxLength="500"
                                                  Text="{Binding DataContext.ManualItemInput.Comment, RelativeSource={RelativeSource AncestorType=UserControl}, UpdateSourceTrigger=PropertyChanged}" />
                                     </StackPanel>
 
-                                    <Button Grid.Column="5"
+                                    <Button Grid.Row="1" Grid.Column="5"
                                             MinWidth="105"
                                             Padding="14,6"
                                             VerticalAlignment="Bottom"
                                             Command="{Binding DataContext.AddManualItemCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                             Content="დამატება"
                                             FontWeight="SemiBold" />
+
+                                    <Grid Grid.Row="2"
+                                          Grid.ColumnSpan="6"
+                                          Margin="0,9,0,0"
+                                          Visibility="{Binding DataContext.ManualItemInput.IsCatalogDetailsVisible, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="2*" />
+                                            <ColumnDefinition Width="2*" />
+                                            <ColumnDefinition Width="3*" />
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0" Margin="0,0,8,0">
+                                            <TextBlock Margin="0,0,0,3" FontSize="11" Text="შტრიხკოდი (არასავალდებულო)" />
+                                            <TextBox Padding="7,5"
+                                                     MaxLength="100"
+                                                     Text="{Binding DataContext.ManualItemInput.Barcode, RelativeSource={RelativeSource AncestorType=UserControl}, UpdateSourceTrigger=PropertyChanged}" />
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="1" Margin="0,0,8,0">
+                                            <TextBlock Margin="0,0,0,3" FontSize="11" Text="საზომი ერთეული" />
+                                            <ComboBox Padding="6,4"
+                                                      DisplayMemberPath="DisplayName"
+                                                      ItemsSource="{Binding DataContext.ManualItemInput.MeasurementUnits, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                      SelectedItem="{Binding DataContext.ManualItemInput.SelectedMeasurementUnit, RelativeSource={RelativeSource AncestorType=UserControl}, Mode=TwoWay}" />
+                                        </StackPanel>
+                                        <TextBlock Grid.Column="2"
+                                                   VerticalAlignment="Bottom"
+                                                   Foreground="#5F6B7A"
+                                                   FontSize="11"
+                                                   Text="კოდი ავტომატურად შეიქმნება სერვერზე." />
+                                    </Grid>
                                 </Grid>
                             </Border>
 
-                            <Grid Grid.Row="1">
+                            <Grid Grid.Row="2">
                                 <DataGrid ItemsSource="{Binding Items}"
                                           SelectedItem="{Binding DataContext.SelectedItem, RelativeSource={RelativeSource AncestorType=UserControl}, Mode=TwoWay}"
                                           AutoGenerateColumns="False"
@@ -228,7 +343,7 @@
                                 </TextBlock>
                             </Grid>
 
-                            <Border Grid.Row="2"
+                            <Border Grid.Row="3"
                                     Margin="0,8,0,0"
                                     Padding="10,8"
                                     Background="#F8F9FB"

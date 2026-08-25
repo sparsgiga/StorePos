@@ -1,7 +1,7 @@
 namespace StorePos.Desktop.Sales.Models;
 
-public sealed record UpdateDraftSaleInfoResponse(
-    long SaleId,
+public sealed record CustomerDialogResult(
+    long? CustomerId,
     string? CustomerName,
     string? CustomerIdentificationNumber,
-    string? Comment);
+    string? SaleComment);

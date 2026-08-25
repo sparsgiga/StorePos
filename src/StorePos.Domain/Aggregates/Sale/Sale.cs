@@ -26,7 +26,15 @@ public sealed class Sale : AuditableEntity<long>, IAggregateRoot
         SaleNumber = saleNumber;
         CashierId = cashierId;
         Status = SaleStatus.Draft;
-        UpdateInfo(customerName, customerIdentificationNumber, comment);
+        CustomerName = NormalizeOptionalText(
+            customerName,
+            CustomerNameMaxLength,
+            nameof(customerName));
+        CustomerIdentificationNumber = NormalizeOptionalText(
+            customerIdentificationNumber,
+            CustomerIdentificationNumberMaxLength,
+            nameof(customerIdentificationNumber));
+        Comment = NormalizeOptionalText(comment, CommentMaxLength, nameof(comment));
     }
 
     public string SaleNumber { get; private set; } = string.Empty;
@@ -34,6 +42,8 @@ public sealed class Sale : AuditableEntity<long>, IAggregateRoot
     public SaleStatus Status { get; private set; }
 
     public long? CashierId { get; private set; }
+
+    public long? CustomerId { get; private set; }
 
     public string? CustomerName { get; private set; }
 
@@ -61,25 +71,49 @@ public sealed class Sale : AuditableEntity<long>, IAggregateRoot
         string? comment = null)
         => new(saleNumber, cashierId, customerName, customerIdentificationNumber, comment);
 
-    public void UpdateInfo(
-        string? customerName,
-        string? customerIdentificationNumber,
-        string? comment)
+    public void AssignCustomer(
+        long customerId,
+        string customerName,
+        string? customerIdentificationNumber)
     {
         EnsureDraft();
 
-        CustomerName = NormalizeOptionalText(
-            customerName,
-            CustomerNameMaxLength,
-            nameof(customerName));
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(customerId);
+
+        if (string.IsNullOrWhiteSpace(customerName))
+        {
+            throw new ArgumentException("Customer name is required.", nameof(customerName));
+        }
+
+        var normalizedName = customerName.Trim();
+        if (normalizedName.Length > CustomerNameMaxLength)
+        {
+            throw new ArgumentException(
+                $"Value cannot exceed {CustomerNameMaxLength} characters.",
+                nameof(customerName));
+        }
+
+        CustomerId = customerId;
+        CustomerName = normalizedName;
         CustomerIdentificationNumber = NormalizeOptionalText(
             customerIdentificationNumber,
             CustomerIdentificationNumberMaxLength,
             nameof(customerIdentificationNumber));
-        Comment = NormalizeOptionalText(
-            comment,
-            CommentMaxLength,
-            nameof(comment));
+    }
+
+    public void RemoveCustomer()
+    {
+        EnsureDraft();
+
+        CustomerId = null;
+        CustomerName = null;
+        CustomerIdentificationNumber = null;
+    }
+
+    public void UpdateComment(string? comment)
+    {
+        EnsureDraft();
+        Comment = NormalizeOptionalText(comment, CommentMaxLength, nameof(comment));
     }
 
     public SaleItem AddManualItem(
@@ -101,6 +135,46 @@ public sealed class Sale : AuditableEntity<long>, IAggregateRoot
         RecalculateTotal();
 
         return item;
+    }
+
+    public CatalogSaleItemAddition AddProductItem(
+        long productId,
+        string productCode,
+        string? barcode,
+        string productName,
+        int measurementUnitId,
+        string measurementUnitName,
+        decimal quantity,
+        decimal unitPrice,
+        string? comment = null)
+    {
+        EnsureDraft();
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(productId);
+
+        var existingItem = _items.SingleOrDefault(item => item.ProductId == productId);
+        if (existingItem is not null)
+        {
+            existingItem.IncreaseQuantity(quantity);
+            RecalculateTotal();
+            return new CatalogSaleItemAddition(existingItem, false);
+        }
+
+        var item = SaleItem.CreateCatalog(
+            Id,
+            productId,
+            productCode,
+            barcode,
+            productName,
+            measurementUnitId,
+            measurementUnitName,
+            quantity,
+            unitPrice,
+            comment);
+
+        _items.Add(item);
+        RecalculateTotal();
+
+        return new CatalogSaleItemAddition(item, true);
     }
 
     public SaleItem UpdateItem(

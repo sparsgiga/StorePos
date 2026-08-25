@@ -97,7 +97,7 @@ public sealed class SaleLifecycleCommandHandlerTests
             CancellationToken cancellationToken = default)
             => Task.FromResult(sale?.Status == SaleStatus.Draft ? sale : null);
 
-        public Task<Sale?> GetDraftForInfoUpdateAsync(
+        public Task<Sale?> GetDraftForMetadataUpdateAsync(
             long saleId,
             CancellationToken cancellationToken = default)
             => GetDraftForUpdateAsync(saleId, cancellationToken);

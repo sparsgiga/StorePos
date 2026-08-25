@@ -5,4 +5,5 @@ public sealed record DraftSaleModel(
     string SaleNumber,
     decimal TotalAmount,
     DateTime DateCreated,
+    long? CustomerId,
     string? CustomerName);

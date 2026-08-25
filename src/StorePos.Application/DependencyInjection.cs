@@ -1,4 +1,9 @@
+using FluentValidation;
+using MediatR;
 using Microsoft.Extensions.DependencyInjection;
+using StorePos.Application.Common.Behaviors;
+using StorePos.Application.Common.Interfaces;
+using StorePos.Application.Products.Services;
 
 namespace StorePos.Application;
 
@@ -8,6 +13,10 @@ public static class DependencyInjection
     {
         services.AddMediatR(configuration =>
             configuration.RegisterServicesFromAssembly(typeof(DependencyInjection).Assembly));
+        services.AddValidatorsFromAssembly(typeof(DependencyInjection).Assembly);
+        services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
+        services.AddTransient(typeof(IPipelineBehavior<,>), typeof(TransactionBehavior<,>));
+        services.AddSingleton<IProductCodeGenerator, GuidProductCodeGenerator>();
 
         return services;
     }

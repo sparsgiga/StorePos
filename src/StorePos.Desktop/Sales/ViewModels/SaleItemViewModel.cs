@@ -12,7 +12,12 @@ public sealed class SaleItemViewModel : ObservableObject
 
     public SaleItemViewModel(
         long id,
+        long? productId,
+        string? productCode,
+        string? barcode,
         string productName,
+        int? measurementUnitId,
+        string? measurementUnitName,
         decimal quantity,
         decimal unitPrice,
         decimal lineTotal,
@@ -20,7 +25,12 @@ public sealed class SaleItemViewModel : ObservableObject
         string? comment)
     {
         Id = id;
+        ProductId = productId;
+        ProductCode = productCode;
+        Barcode = barcode;
         _productName = productName;
+        MeasurementUnitId = measurementUnitId;
+        MeasurementUnitName = measurementUnitName;
         _quantity = quantity;
         _unitPrice = unitPrice;
         _lineTotal = lineTotal;
@@ -29,6 +39,16 @@ public sealed class SaleItemViewModel : ObservableObject
     }
 
     public long Id { get; }
+
+    public long? ProductId { get; }
+
+    public string? ProductCode { get; }
+
+    public string? Barcode { get; }
+
+    public int? MeasurementUnitId { get; }
+
+    public string? MeasurementUnitName { get; }
 
     public string ProductName
     {

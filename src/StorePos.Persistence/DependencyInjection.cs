@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using StorePos.Application.Common.Interfaces;
+using StorePos.Domain.Aggregates.Customer;
 using StorePos.Domain.Aggregates.MeasurementUnit;
 using StorePos.Domain.Aggregates.Product;
 using StorePos.Domain.Aggregates.Sale;
@@ -26,11 +27,15 @@ public static class DependencyInjection
             options.UseSqlServer(connectionString));
 
         services.AddScoped<IProductRepository, ProductRepository>();
+        services.AddScoped<ICustomerRepository, CustomerRepository>();
         services.AddScoped<IMeasurementUnitRepository, MeasurementUnitRepository>();
         services.AddScoped<ISaleRepository, SaleRepository>();
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<ISaleNumberGenerator, SaleNumberGenerator>();
         services.AddScoped<ISalesReadService, SalesReadService>();
+        services.AddScoped<ICustomerReadService, CustomerReadService>();
+        services.AddScoped<IProductReadService, ProductReadService>();
+        services.AddScoped<IMeasurementUnitReadService, MeasurementUnitReadService>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.TryAddSingleton(TimeProvider.System);
 

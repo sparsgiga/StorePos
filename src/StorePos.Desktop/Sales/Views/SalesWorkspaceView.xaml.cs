@@ -23,11 +23,13 @@ public partial class SalesWorkspaceView : UserControl
         if (e.OldValue is SalesWorkspaceViewModel oldViewModel)
         {
             oldViewModel.ProductNameFocusRequested -= OnProductNameFocusRequested;
+            oldViewModel.ProductSearch.FocusRequested -= OnProductSearchFocusRequested;
         }
 
         if (e.NewValue is SalesWorkspaceViewModel newViewModel)
         {
             newViewModel.ProductNameFocusRequested += OnProductNameFocusRequested;
+            newViewModel.ProductSearch.FocusRequested += OnProductSearchFocusRequested;
         }
     }
 
@@ -36,7 +38,20 @@ public partial class SalesWorkspaceView : UserControl
         if (DataContext is SalesWorkspaceViewModel viewModel)
         {
             viewModel.ProductNameFocusRequested -= OnProductNameFocusRequested;
+            viewModel.ProductSearch.FocusRequested -= OnProductSearchFocusRequested;
         }
+    }
+
+    private void OnProductSearchFocusRequested(object? sender, EventArgs e)
+    {
+        Dispatcher.BeginInvoke(
+            () =>
+            {
+                var searchTextBox = FindByTag<TextBox>(this, "CatalogProductSearch");
+                searchTextBox?.Focus();
+                searchTextBox?.SelectAll();
+            },
+            DispatcherPriority.Input);
     }
 
     private void OnProductNameFocusRequested(object? sender, EventArgs e)

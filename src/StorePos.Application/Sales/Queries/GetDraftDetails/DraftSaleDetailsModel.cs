@@ -5,6 +5,7 @@ public sealed record DraftSaleDetailsModel(
     string SaleNumber,
     decimal TotalAmount,
     DateTime DateCreated,
+    long? CustomerId,
     string? CustomerName,
     string? CustomerIdentificationNumber,
     string? Comment,

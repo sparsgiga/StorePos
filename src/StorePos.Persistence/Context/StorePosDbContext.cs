@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using StorePos.Domain.Aggregates.Customer;
 using StorePos.Domain.Aggregates.MeasurementUnit;
 using StorePos.Domain.Aggregates.Product;
 using StorePos.Domain.Aggregates.Sale;
@@ -10,6 +11,8 @@ namespace StorePos.Persistence.Context;
 public sealed class StorePosDbContext(DbContextOptions<StorePosDbContext> options)
     : DbContext(options)
 {
+    public DbSet<Customer> Customers => Set<Customer>();
+
     public DbSet<Product> Products => Set<Product>();
 
     public DbSet<MeasurementUnit> MeasurementUnits => Set<MeasurementUnit>();

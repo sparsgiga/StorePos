@@ -6,6 +6,7 @@ namespace StorePos.Desktop.Sales.ViewModels;
 public sealed class SaleTabViewModel : ObservableObject
 {
     private decimal _totalAmount;
+    private long? _customerId;
     private string? _customerName;
     private string? _customerIdentificationNumber;
     private string? _comment;
@@ -15,6 +16,7 @@ public sealed class SaleTabViewModel : ObservableObject
         string saleNumber,
         decimal totalAmount,
         DateTime dateCreated,
+        long? customerId,
         string? customerName,
         string? customerIdentificationNumber = null,
         string? comment = null,
@@ -24,6 +26,7 @@ public sealed class SaleTabViewModel : ObservableObject
         SaleNumber = saleNumber;
         _totalAmount = totalAmount;
         DateCreated = dateCreated;
+        _customerId = customerId;
         _customerName = customerName;
         _customerIdentificationNumber = customerIdentificationNumber;
         _comment = comment;
@@ -41,6 +44,12 @@ public sealed class SaleTabViewModel : ObservableObject
     }
 
     public DateTime DateCreated { get; }
+
+    public long? CustomerId
+    {
+        get => _customerId;
+        private set => SetProperty(ref _customerId, value);
+    }
 
     public string? CustomerName
     {
@@ -66,6 +75,7 @@ public sealed class SaleTabViewModel : ObservableObject
 
     public void ApplyDetails(
         decimal totalAmount,
+        long? customerId,
         string? customerName,
         string? customerIdentificationNumber,
         string? comment,
@@ -78,17 +88,20 @@ public sealed class SaleTabViewModel : ObservableObject
         }
 
         TotalAmount = totalAmount;
+        CustomerId = customerId;
         CustomerName = customerName;
         CustomerIdentificationNumber = customerIdentificationNumber;
         Comment = comment;
         IsDetailsLoaded = true;
     }
 
-    public void ApplyInfo(
+    public void ApplyCustomerInfo(
+        long? customerId,
         string? customerName,
         string? customerIdentificationNumber,
         string? comment)
     {
+        CustomerId = customerId;
         CustomerName = customerName;
         CustomerIdentificationNumber = customerIdentificationNumber;
         Comment = comment;
@@ -97,6 +110,27 @@ public sealed class SaleTabViewModel : ObservableObject
     public void AddItem(SaleItemViewModel item, decimal totalAmount)
     {
         Items.Add(item);
+        TotalAmount = totalAmount;
+        IsDetailsLoaded = true;
+    }
+
+    public void ApplyCatalogItem(SaleItemViewModel item, bool wasNewItem, decimal totalAmount)
+    {
+        if (wasNewItem)
+        {
+            Items.Add(item);
+        }
+        else
+        {
+            var existingItem = Items.Single(existing => existing.Id == item.Id);
+            existingItem.ApplyUpdate(
+                existingItem.ProductName,
+                item.Quantity,
+                item.UnitPrice,
+                item.LineTotal,
+                item.Comment);
+        }
+
         TotalAmount = totalAmount;
         IsDetailsLoaded = true;
     }

@@ -4,7 +4,10 @@ namespace StorePos.Domain.Aggregates.Sale;
 
 public sealed class SaleItem : AuditableEntity<long>
 {
+    public const int ProductCodeMaxLength = 50;
+    public const int BarcodeMaxLength = 100;
     public const int ProductNameMaxLength = 300;
+    public const int MeasurementUnitNameMaxLength = 100;
     public const int CommentMaxLength = 500;
 
     private SaleItem()
@@ -79,6 +82,61 @@ public sealed class SaleItem : AuditableEntity<long>
             comment);
     }
 
+    internal static SaleItem CreateCatalog(
+        long saleId,
+        long productId,
+        string productCode,
+        string? barcode,
+        string productName,
+        int measurementUnitId,
+        string measurementUnitName,
+        decimal quantity,
+        decimal unitPrice,
+        string? comment = null)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(productId);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(measurementUnitId);
+
+        var normalizedProductCode = NormalizeRequiredText(
+            productCode,
+            ProductCodeMaxLength,
+            nameof(productCode));
+        var normalizedBarcode = NormalizeOptionalText(
+            barcode,
+            BarcodeMaxLength,
+            nameof(barcode));
+        var normalizedMeasurementUnitName = NormalizeRequiredText(
+            measurementUnitName,
+            MeasurementUnitNameMaxLength,
+            nameof(measurementUnitName));
+
+        return new SaleItem(
+            saleId,
+            productId,
+            normalizedProductCode,
+            normalizedBarcode,
+            productName,
+            measurementUnitId,
+            normalizedMeasurementUnitName,
+            quantity,
+            unitPrice,
+            isManual: false,
+            comment);
+    }
+
+    internal void IncreaseQuantity(decimal quantity)
+    {
+        if (quantity <= 0)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(quantity),
+                "Quantity must be greater than zero.");
+        }
+
+        Quantity += quantity;
+        LineTotal = Quantity * UnitPrice;
+    }
+
     internal void UpdateDetails(
         string productName,
         decimal quantity,
@@ -123,10 +181,51 @@ public sealed class SaleItem : AuditableEntity<long>
                 nameof(comment));
         }
 
-        ProductName = normalizedProductName;
+        if (IsManual || string.IsNullOrEmpty(ProductName))
+        {
+            ProductName = normalizedProductName;
+        }
+
         Quantity = quantity;
         UnitPrice = unitPrice;
         LineTotal = quantity * unitPrice;
         Comment = normalizedComment;
+    }
+
+    private static string NormalizeRequiredText(
+        string value,
+        int maxLength,
+        string parameterName)
+    {
+        var normalizedValue = value?.Trim();
+        if (string.IsNullOrWhiteSpace(normalizedValue))
+        {
+            throw new ArgumentException("Value is required.", parameterName);
+        }
+
+        if (normalizedValue.Length > maxLength)
+        {
+            throw new ArgumentException(
+                $"Value cannot exceed {maxLength} characters.",
+                parameterName);
+        }
+
+        return normalizedValue;
+    }
+
+    private static string? NormalizeOptionalText(
+        string? value,
+        int maxLength,
+        string parameterName)
+    {
+        var normalizedValue = string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+        if (normalizedValue?.Length > maxLength)
+        {
+            throw new ArgumentException(
+                $"Value cannot exceed {maxLength} characters.",
+                parameterName);
+        }
+
+        return normalizedValue;
     }
 }

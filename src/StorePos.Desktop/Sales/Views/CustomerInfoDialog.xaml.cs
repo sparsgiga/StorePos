@@ -14,7 +14,14 @@ public partial class CustomerInfoDialog : Window
         _viewModel = viewModel;
         DataContext = viewModel;
         viewModel.CloseRequested += OnCloseRequested;
+        Loaded += OnLoaded;
         Closed += OnClosed;
+    }
+
+    private async void OnLoaded(object sender, RoutedEventArgs e)
+    {
+        SearchBox.Focus();
+        await _viewModel.InitializeAsync();
     }
 
     private void OnCloseRequested(
@@ -23,5 +30,9 @@ public partial class CustomerInfoDialog : Window
         => DialogResult = e.DialogResult;
 
     private void OnClosed(object? sender, EventArgs e)
-        => _viewModel.CloseRequested -= OnCloseRequested;
+    {
+        Loaded -= OnLoaded;
+        _viewModel.CloseRequested -= OnCloseRequested;
+        _viewModel.Dispose();
+    }
 }

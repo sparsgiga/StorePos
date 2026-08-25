@@ -18,6 +18,7 @@ public sealed class GetDraftSalesQueryHandler(ISaleRepository saleRepository)
                 sale.SaleNumber,
                 sale.TotalAmount,
                 sale.DateCreated,
+                sale.CustomerId,
                 sale.CustomerName))
             .ToArray();
     }

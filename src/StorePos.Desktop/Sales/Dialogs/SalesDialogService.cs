@@ -8,13 +8,14 @@ namespace StorePos.Desktop.Sales.Dialogs;
 
 public sealed class SalesDialogService(IStorePosApiClient apiClient) : ISalesDialogService
 {
-    public UpdateDraftSaleInfoResponse? ShowCustomerInfo(
+    public CustomerDialogResult? ShowCustomerInfo(
         SaleTabViewModel sale,
         CancellationToken cancellationToken = default)
     {
         var viewModel = new CustomerInfoDialogViewModel(
             apiClient,
             sale.Id,
+            sale.CustomerId,
             sale.CustomerName,
             sale.CustomerIdentificationNumber,
             sale.Comment,
@@ -24,7 +25,8 @@ public sealed class SalesDialogService(IStorePosApiClient apiClient) : ISalesDia
             Owner = Application.Current.MainWindow
         };
 
-        return dialog.ShowDialog() == true ? viewModel.Result : null;
+        dialog.ShowDialog();
+        return viewModel.Result;
     }
 
     public UpdateSaleItemResponse? ShowEditItem(

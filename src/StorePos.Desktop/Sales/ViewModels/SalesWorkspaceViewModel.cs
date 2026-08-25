@@ -6,6 +6,8 @@ using StorePos.Desktop.Api;
 using StorePos.Desktop.Common;
 using StorePos.Desktop.Sales.Dialogs;
 using StorePos.Desktop.Sales.Models;
+using StorePos.Desktop.Products;
+using StorePos.Desktop.Products.ViewModels;
 
 namespace StorePos.Desktop.Sales.ViewModels;
 
@@ -33,6 +35,12 @@ public sealed class SalesWorkspaceViewModel : ObservableObject, IDisposable
     {
         _apiClient = apiClient;
         _dialogService = dialogService;
+        ProductSearch = new ProductSearchViewModel(
+            apiClient,
+            () => SelectedSale?.IsDetailsLoaded == true ? SelectedSale.Id : null);
+        ProductSearch.ProductAdded += OnProductAdded;
+        ProductSearch.ManualFallbackRequested += OnManualFallbackRequested;
+        ProductSearch.ErrorOccurred += OnProductSearchError;
         ManualItemInput.PropertyChanged += OnManualItemInputPropertyChanged;
 
         _newSaleCommand = new AsyncRelayCommand(CreateDraftSaleAsync, () => !IsBusy);
@@ -52,6 +60,8 @@ public sealed class SalesWorkspaceViewModel : ObservableObject, IDisposable
 
     public SaleItemInputViewModel ManualItemInput { get; } = new();
 
+    public ProductSearchViewModel ProductSearch { get; }
+
     public SaleTabViewModel? SelectedSale
     {
         get => _selectedSale;
@@ -63,6 +73,7 @@ public sealed class SalesWorkspaceViewModel : ObservableObject, IDisposable
             }
 
             SelectedItem = null;
+            ProductSearch.NotifySaleChanged();
             NotifyCommandStates();
             _ = LoadSaleDetailsAsync(value);
         }
@@ -112,7 +123,26 @@ public sealed class SalesWorkspaceViewModel : ObservableObject, IDisposable
 
     public ICommand CancelSaleCommand => _cancelSaleCommand;
 
-    public Task InitializeAsync() => RefreshAsync();
+    public async Task InitializeAsync()
+    {
+        var unitsTask = _apiClient.GetMeasurementUnitsAsync(_lifetimeCancellation.Token);
+        var refreshTask = RefreshAsync();
+
+        try
+        {
+            ManualItemInput.LoadMeasurementUnits(await unitsTask);
+        }
+        catch (OperationCanceledException) when (_lifetimeCancellation.IsCancellationRequested)
+        {
+        }
+        catch (Exception exception)
+        {
+            Trace.TraceError(exception.ToString());
+            ErrorMessage = "საზომი ერთეულების ჩატვირთვა ვერ მოხერხდა.";
+        }
+
+        await refreshTask;
+    }
 
     public async Task RefreshAsync(long? preferredSaleId = null)
     {
@@ -153,6 +183,10 @@ public sealed class SalesWorkspaceViewModel : ObservableObject, IDisposable
     public void Dispose()
     {
         ManualItemInput.PropertyChanged -= OnManualItemInputPropertyChanged;
+        ProductSearch.ProductAdded -= OnProductAdded;
+        ProductSearch.ManualFallbackRequested -= OnManualFallbackRequested;
+        ProductSearch.ErrorOccurred -= OnProductSearchError;
+        ProductSearch.Dispose();
         _detailsCancellation?.Cancel();
         _detailsCancellation?.Dispose();
         _lifetimeCancellation.Cancel();
@@ -175,6 +209,7 @@ public sealed class SalesWorkspaceViewModel : ObservableObject, IDisposable
                 createdSale.SaleNumber,
                 createdSale.TotalAmount,
                 createdSale.DateCreated,
+                null,
                 createdSale.CustomerName,
                 isDetailsLoaded: true);
 
@@ -213,31 +248,60 @@ public sealed class SalesWorkspaceViewModel : ObservableObject, IDisposable
             IsBusy = true;
             ErrorMessage = null;
 
-            var result = await _apiClient.AddManualSaleItemAsync(
-                sale.Id,
-                new AddManualSaleItemRequest(
-                    productName,
-                    quantity,
-                    unitPrice,
-                    ManualItemInput.Comment),
-                _lifetimeCancellation.Token);
+            if (ManualItemInput.SaveToCatalog)
+            {
+                var unit = ManualItemInput.SelectedMeasurementUnit
+                    ?? throw new InvalidOperationException("Measurement unit is required.");
+                var result = await _apiClient.CreateProductAndAddSaleItemAsync(
+                    sale.Id,
+                    new CreateProductAndAddSaleItemRequest(
+                        productName,
+                        ManualItemInput.Barcode,
+                        unit.Id,
+                        quantity,
+                        unitPrice,
+                        ManualItemInput.Comment),
+                    _lifetimeCancellation.Token);
+                ApplyCatalogResult(result);
+            }
+            else
+            {
+                var result = await _apiClient.AddManualSaleItemAsync(
+                    sale.Id,
+                    new AddManualSaleItemRequest(
+                        productName,
+                        quantity,
+                        unitPrice,
+                        ManualItemInput.Comment),
+                    _lifetimeCancellation.Token);
 
-            sale.AddItem(
-                new SaleItemViewModel(
-                    result.SaleItemId,
-                    result.ProductName,
-                    result.Quantity,
-                    result.UnitPrice,
-                    result.LineTotal,
-                    isManual: true,
-                    result.Comment),
-                result.SaleTotalAmount);
+                sale.AddItem(
+                    new SaleItemViewModel(
+                        result.SaleItemId,
+                        productId: null,
+                        productCode: null,
+                        barcode: null,
+                        result.ProductName,
+                        measurementUnitId: null,
+                        measurementUnitName: null,
+                        result.Quantity,
+                        result.UnitPrice,
+                        result.LineTotal,
+                        isManual: true,
+                        result.Comment),
+                    result.SaleTotalAmount);
+            }
 
             ManualItemInput.Reset();
-            ProductNameFocusRequested?.Invoke(this, EventArgs.Empty);
+            ProductSearch.ClearAndFocus();
         }
         catch (OperationCanceledException) when (_lifetimeCancellation.IsCancellationRequested)
         {
+        }
+        catch (ProductConflictException exception)
+        {
+            Trace.TraceWarning(exception.ToString());
+            ErrorMessage = "ეს შტრიხკოდი უკვე სხვა პროდუქტზეა გამოყენებული.";
         }
         catch (Exception exception)
         {
@@ -267,10 +331,11 @@ public sealed class SalesWorkspaceViewModel : ObservableObject, IDisposable
             return;
         }
 
-        sale.ApplyInfo(
+        sale.ApplyCustomerInfo(
+            result.CustomerId,
             result.CustomerName,
             result.CustomerIdentificationNumber,
-            result.Comment);
+            result.SaleComment);
         ErrorMessage = null;
     }
 
@@ -424,6 +489,7 @@ public sealed class SalesWorkspaceViewModel : ObservableObject, IDisposable
 
             sale.ApplyDetails(
                 details.TotalAmount,
+                details.CustomerId,
                 details.CustomerName,
                 details.CustomerIdentificationNumber,
                 details.Comment,
@@ -453,7 +519,7 @@ public sealed class SalesWorkspaceViewModel : ObservableObject, IDisposable
     private bool CanAddManualItem()
         => !IsBusy &&
            SelectedSale?.IsDetailsLoaded == true &&
-           ManualItemInput.IsComplete;
+           ManualItemInput.CanSubmit;
 
     private bool CanEditCustomer()
         => !IsBusy && SelectedSale?.IsDetailsLoaded == true;
@@ -475,7 +541,8 @@ public sealed class SalesWorkspaceViewModel : ObservableObject, IDisposable
         object? sender,
         PropertyChangedEventArgs e)
     {
-        if (e.PropertyName == nameof(SaleItemInputViewModel.IsComplete))
+        if (e.PropertyName is nameof(SaleItemInputViewModel.IsComplete) or
+            nameof(SaleItemInputViewModel.CanSubmit))
         {
             _addManualItemCommand.NotifyCanExecuteChanged();
         }
@@ -512,15 +579,72 @@ public sealed class SalesWorkspaceViewModel : ObservableObject, IDisposable
             sale.SaleNumber,
             sale.TotalAmount,
             sale.DateCreated,
+            sale.CustomerId,
             sale.CustomerName);
 
     private static SaleItemViewModel Map(DraftSaleItemDto item)
         => new(
             item.Id,
+            item.ProductId,
+            item.ProductCode,
+            item.Barcode,
             item.ProductName,
+            item.UnitId,
+            item.UnitName,
             item.Quantity,
             item.UnitPrice,
             item.LineTotal,
             item.IsManual,
             item.Comment);
+
+    private void OnProductAdded(object? sender, ProductAddedEventArgs e)
+    {
+        ApplyCatalogResult(e.Result);
+        ErrorMessage = null;
+    }
+
+    private void ApplyCatalogResult(AddProductSaleItemResponse result)
+    {
+        var sale = OpenSales.SingleOrDefault(openSale => openSale.Id == result.SaleId);
+        if (sale is null)
+        {
+            return;
+        }
+
+        sale.ApplyCatalogItem(
+            new SaleItemViewModel(
+                result.SaleItemId,
+                result.ProductId,
+                result.ProductCode,
+                result.Barcode,
+                result.ProductName,
+                result.MeasurementUnitId,
+                result.MeasurementUnitName,
+                result.Quantity,
+                result.UnitPrice,
+                result.LineTotal,
+                isManual: false,
+                result.Comment),
+            result.WasNewItem,
+            result.SaleTotalAmount);
+    }
+
+    private void OnManualFallbackRequested(
+        object? sender,
+        ManualProductFallbackEventArgs e)
+    {
+        ManualItemInput.PrepareManualFallback(e.Value, e.IsBarcode);
+        ErrorMessage = "პროდუქტი კატალოგში ვერ მოიძებნა — შეავსეთ ხელით.";
+        ProductNameFocusRequested?.Invoke(this, EventArgs.Empty);
+    }
+
+    private void OnProductSearchError(object? sender, ProductSearchErrorEventArgs e)
+    {
+        if (e.Exception is not null)
+        {
+            Trace.TraceError(e.Exception.ToString());
+        }
+
+        ErrorMessage = e.Message;
+    }
 }

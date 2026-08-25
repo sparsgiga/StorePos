@@ -1,66 +1,327 @@
 <Window x:Class="StorePos.Desktop.Sales.Views.CustomerInfoDialog"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="მყიდველის ინფორმაცია"
-        Width="520"
-        SizeToContent="Height"
-        ResizeMode="NoResize"
+        Title="მყიდველი"
+        Width="720"
+        Height="720"
+        MinWidth="620"
+        MinHeight="620"
         ShowInTaskbar="False"
         WindowStartupLocation="CenterOwner">
     <Grid Margin="22">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <StackPanel Grid.Row="0" Margin="0,0,0,12">
-            <TextBlock Margin="0,0,0,4" Text="მყიდველის სახელი / დასახელება" />
-            <TextBox Padding="8,6"
-                     MaxLength="300"
-                     Text="{Binding CustomerName, UpdateSourceTrigger=PropertyChanged}" />
+        <Border Grid.Row="0"
+                Margin="0,0,0,10"
+                Padding="10"
+                Background="#F3F6F9"
+                BorderBrush="#D9E0E7"
+                BorderThickness="1"
+                CornerRadius="4">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="2*" />
+                    <ColumnDefinition Width="1.3*" />
+                    <ColumnDefinition Width="3*" />
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,18,0">
+                    <TextBlock FontWeight="SemiBold" Text="მიმდინარე მყიდველი" />
+                    <TextBlock Margin="0,4,0,0"
+                               FontSize="15"
+                               Text="{Binding CustomerName, TargetNullValue=არ არის მითითებული}"
+                               TextTrimming="CharacterEllipsis"
+                               ToolTip="{Binding CustomerName}" />
+                </StackPanel>
+
+                <StackPanel Grid.Row="0" Grid.Column="1" Margin="0,0,18,0">
+                    <TextBlock FontWeight="SemiBold" Text="საიდენტიფიკაციო ნომერი" />
+                    <TextBlock Margin="0,4,0,0"
+                               Foreground="#5F6B7A"
+                               Text="{Binding CustomerIdentificationNumber, TargetNullValue=—}"
+                               TextTrimming="CharacterEllipsis" />
+                </StackPanel>
+
+                <StackPanel Grid.Row="0" Grid.Column="2">
+                    <TextBlock FontWeight="SemiBold" Text="მყიდველის ინფორმაცია" />
+                    <TextBlock Margin="0,4,0,0"
+                               MaxHeight="38"
+                               Foreground="#5F6B7A"
+                               Text="{Binding AssignedCustomerInformation, TargetNullValue=—}"
+                               TextTrimming="CharacterEllipsis"
+                               TextWrapping="Wrap"
+                               ToolTip="{Binding AssignedCustomerInformation}" />
+                </StackPanel>
+
+                <TextBlock Grid.Row="1"
+                           Grid.ColumnSpan="3"
+                           Margin="0,7,0,0"
+                           Foreground="#9A6700"
+                           Text="ძველი ჩანაწერია: კატალოგის მყიდველი ჯერ არ არის მიბმული."
+                           TextWrapping="Wrap">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Visibility" Value="Collapsed" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsLegacySnapshot}" Value="True">
+                                    <Setter Property="Visibility" Value="Visible" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+            </Grid>
+        </Border>
+
+        <Grid Grid.Row="1">
+            <Grid x:Name="SearchPanel">
+                <Grid.Style>
+                    <Style TargetType="Grid">
+                        <Setter Property="Visibility" Value="Collapsed" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsSearchVisible}" Value="True">
+                                <Setter Property="Visibility" Value="Visible" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Grid.Style>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <StackPanel Grid.Row="0" Margin="0,0,0,10">
+                    <TextBlock Margin="0,0,0,4" Text="ძებნა — სახელი ან საიდენტიფიკაციო ნომერი" />
+                    <TextBox x:Name="SearchBox"
+                             Padding="9,7"
+                             Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" />
+                    <TextBlock Margin="0,4,0,0"
+                               Foreground="#6B7280"
+                               Text="შეიყვანეთ მინიმუმ 2 სიმბოლო." />
+                    <TextBlock Margin="0,3,0,0"
+                               Foreground="#334155"
+                               FontWeight="SemiBold"
+                               Text="{Binding SearchResults.Count, StringFormat=ნაპოვნია: {0}}" />
+                </StackPanel>
+
+                <ListBox Grid.Row="1"
+                         Height="175"
+                         Background="White"
+                         BorderBrush="#8CA2B8"
+                         BorderThickness="1"
+                         ItemsSource="{Binding SearchResults}"
+                         SelectedItem="{Binding SelectedCustomer}"
+                         ScrollViewer.VerticalScrollBarVisibility="Auto">
+                    <ListBox.ItemContainerStyle>
+                        <Style TargetType="ListBoxItem">
+                            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                            <Setter Property="Padding" Value="0" />
+                        </Style>
+                    </ListBox.ItemContainerStyle>
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <Border Padding="9,7"
+                                    BorderBrush="#E2E8F0"
+                                    BorderThickness="0,0,0,1">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="2*" />
+                                        <ColumnDefinition Width="1.2*" />
+                                        <ColumnDefinition Width="2.5*" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0"
+                                               Margin="0,0,12,0"
+                                               FontSize="14"
+                                               FontWeight="SemiBold"
+                                               Text="{Binding Name}"
+                                               TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Grid.Column="1"
+                                               Margin="0,0,12,0"
+                                               Foreground="#5F6B7A"
+                                               Text="{Binding IdentificationNumber, TargetNullValue=—}"
+                                               TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Grid.Column="2"
+                                               Foreground="#5F6B7A"
+                                               Text="{Binding Information, TargetNullValue=—}"
+                                               TextTrimming="CharacterEllipsis" />
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+
+                <Border Grid.Row="2"
+                        Margin="0,8,0,8"
+                        Padding="8"
+                        Background="#FAFAFA"
+                        BorderBrush="#E2E5E9"
+                        BorderThickness="1">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="2*" />
+                            <ColumnDefinition Width="1.3*" />
+                            <ColumnDefinition Width="3*" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0" Margin="0,0,12,0">
+                            <TextBlock FontWeight="SemiBold" Text="არჩეული მყიდველი" />
+                            <TextBlock Margin="0,3,0,0"
+                                       Text="{Binding SelectedCustomer.Name, TargetNullValue=აირჩიეთ სიიდან}"
+                                       TextTrimming="CharacterEllipsis" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Margin="0,0,12,0">
+                            <TextBlock FontWeight="SemiBold" Text="ნომერი" />
+                            <TextBlock Margin="0,3,0,0"
+                                       Foreground="#5F6B7A"
+                                       Text="{Binding SelectedCustomer.IdentificationNumber, TargetNullValue=—}"
+                                       TextTrimming="CharacterEllipsis" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="2">
+                            <TextBlock FontWeight="SemiBold" Text="მყიდველის ინფორმაცია" />
+                            <TextBlock Margin="0,3,0,0"
+                                       MaxHeight="34"
+                                       Foreground="#5F6B7A"
+                                       Text="{Binding SelectedCustomer.Information, TargetNullValue=—}"
+                                       TextTrimming="CharacterEllipsis"
+                                       TextWrapping="Wrap" />
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <StackPanel Grid.Row="3" HorizontalAlignment="Right" Orientation="Horizontal">
+                    <Button MinWidth="145"
+                            Margin="0,0,8,0"
+                            Padding="12,7"
+                            Command="{Binding NewCustomerCommand}"
+                            Content="+ ახალი მყიდველი" />
+                    <Button MinWidth="115"
+                            Margin="0,0,8,0"
+                            Padding="12,7"
+                            Command="{Binding EditCustomerCommand}"
+                            Content="რედაქტირება" />
+                    <Button MinWidth="100"
+                            Padding="12,7"
+                            Command="{Binding SelectCustomerCommand}"
+                            Content="არჩევა"
+                            IsDefault="True"
+                            FontWeight="SemiBold" />
+                </StackPanel>
+            </Grid>
+
+            <Grid x:Name="EditorPanel">
+                <Grid.Style>
+                    <Style TargetType="Grid">
+                        <Setter Property="Visibility" Value="Collapsed" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsEditorVisible}" Value="True">
+                                <Setter Property="Visibility" Value="Visible" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Grid.Style>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <TextBlock Grid.Row="0"
+                           Margin="0,0,0,14"
+                           FontSize="18"
+                           FontWeight="SemiBold"
+                           Text="{Binding EditorTitle}" />
+                <StackPanel Grid.Row="1" Margin="0,0,0,12">
+                    <TextBlock Margin="0,0,0,4" Text="სახელი / დასახელება" />
+                    <TextBox Padding="8,6"
+                             MaxLength="300"
+                             Text="{Binding EditorName, UpdateSourceTrigger=PropertyChanged}" />
+                </StackPanel>
+                <StackPanel Grid.Row="2" Margin="0,0,0,12">
+                    <TextBlock Margin="0,0,0,4" Text="პირადი / საიდენტიფიკაციო ნომერი" />
+                    <TextBox Padding="8,6"
+                             MaxLength="50"
+                             Text="{Binding EditorIdentificationNumber, UpdateSourceTrigger=PropertyChanged}" />
+                </StackPanel>
+                <StackPanel Grid.Row="3" Margin="0,0,0,12">
+                    <TextBlock Margin="0,0,0,4" Text="მყიდველის ინფორმაცია" />
+                    <TextBox MinHeight="100"
+                             Padding="8,6"
+                             AcceptsReturn="True"
+                             MaxLength="2000"
+                             Text="{Binding EditorInformation, UpdateSourceTrigger=PropertyChanged}"
+                             TextWrapping="Wrap" />
+                </StackPanel>
+                <StackPanel Grid.Row="4" HorizontalAlignment="Right" Orientation="Horizontal">
+                    <Button MinWidth="100"
+                            Margin="0,0,8,0"
+                            Padding="12,7"
+                            Command="{Binding BackToSearchCommand}"
+                            Content="უკან" />
+                    <Button MinWidth="110"
+                            Padding="12,7"
+                            Command="{Binding SaveCustomerCommand}"
+                            Content="{Binding EditorSaveText}"
+                            FontWeight="SemiBold" />
+                </StackPanel>
+            </Grid>
+        </Grid>
+
+        <Border Grid.Row="2"
+                Margin="0,10,0,0"
+                Padding="8"
+                Background="#F8FAFC"
+                BorderBrush="#D9E0E7"
+                BorderThickness="1">
+            <StackPanel>
+                <TextBlock Margin="0,0,0,4" FontWeight="SemiBold" Text="გაყიდვის კომენტარი" />
+                <TextBox MinHeight="36"
+                         MaxHeight="52"
+                         Padding="8,6"
+                         AcceptsReturn="True"
+                         MaxLength="4000"
+                         Text="{Binding SaleComment, UpdateSourceTrigger=PropertyChanged}"
+                         TextWrapping="Wrap" />
+                <Button MinWidth="110"
+                        Margin="0,6,0,0"
+                        Padding="10,5"
+                        HorizontalAlignment="Right"
+                        Command="{Binding SaveSaleCommentCommand}"
+                        Content="კომენტარის შენახვა" />
+            </StackPanel>
+        </Border>
+
+        <StackPanel Grid.Row="3" Margin="0,10,0,10">
+            <TextBlock Foreground="#16794A" Text="{Binding StatusMessage}" TextWrapping="Wrap" />
+            <TextBlock Margin="0,3,0,0"
+                       Foreground="#B42318"
+                       Text="{Binding ErrorMessage}"
+                       TextWrapping="Wrap" />
         </StackPanel>
 
-        <StackPanel Grid.Row="1" Margin="0,0,0,12">
-            <TextBlock Margin="0,0,0,4" Text="პირადი / საიდენტიფიკაციო ნომერი" />
-            <TextBox Padding="8,6"
-                     MaxLength="50"
-                     Text="{Binding CustomerIdentificationNumber, UpdateSourceTrigger=PropertyChanged}" />
-        </StackPanel>
-
-        <StackPanel Grid.Row="2" Margin="0,0,0,12">
-            <TextBlock Margin="0,0,0,4" Text="კომენტარი" />
-            <TextBox MinHeight="70"
-                     Padding="8,6"
-                     AcceptsReturn="True"
-                     MaxLength="4000"
-                     Text="{Binding Comment, UpdateSourceTrigger=PropertyChanged}"
-                     TextWrapping="Wrap" />
-        </StackPanel>
-
-        <TextBlock Grid.Row="3"
-                   Margin="0,0,0,12"
-                   Foreground="#B42318"
-                   Text="{Binding ErrorMessage}"
-                   TextWrapping="Wrap" />
-
-        <StackPanel Grid.Row="4"
-                    HorizontalAlignment="Right"
-                    Orientation="Horizontal">
+        <DockPanel Grid.Row="4" LastChildFill="False">
+            <Button MinWidth="155"
+                    Padding="12,7"
+                    DockPanel.Dock="Left"
+                    Command="{Binding RemoveCustomerCommand}"
+                    Content="მყიდველის მოხსნა" />
             <Button MinWidth="100"
-                    Margin="0,0,8,0"
                     Padding="14,7"
-                    Command="{Binding CancelCommand}"
-                    Content="გაუქმება"
-                    IsCancel="True" />
-            <Button MinWidth="100"
-                    Padding="14,7"
-                    Command="{Binding SaveCommand}"
-                    Content="შენახვა"
-                    IsDefault="True"
-                    FontWeight="SemiBold" />
-        </StackPanel>
+                    DockPanel.Dock="Right"
+                    Command="{Binding CloseCommand}"
+                    Content="დახურვა" />
+        </DockPanel>
     </Grid>
 </Window>

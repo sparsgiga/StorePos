@@ -59,7 +59,7 @@ public sealed class CreateDraftSaleCommandHandlerTests
             CancellationToken cancellationToken = default)
             => Task.FromResult<Sale?>(null);
 
-        public Task<Sale?> GetDraftForInfoUpdateAsync(
+        public Task<Sale?> GetDraftForMetadataUpdateAsync(
             long saleId,
             CancellationToken cancellationToken = default)
             => Task.FromResult<Sale?>(null);

@@ -1,9 +1,14 @@
 using System.Net.Http;
 using System.Net.Http.Json;
+using System.Net;
 using System.Text.Json;
+using StorePos.Desktop.Customers;
+using StorePos.Desktop.Customers.Models;
 using StorePos.Desktop.Sales.Models;
 using StorePos.Desktop.History.Models;
 using System.Globalization;
+using StorePos.Desktop.Products;
+using StorePos.Desktop.Products.Models;
 
 namespace StorePos.Desktop.Api;
 
@@ -76,23 +81,181 @@ public sealed class StorePosApiClient(HttpClient httpClient) : IStorePosApiClien
                ?? throw new InvalidOperationException("The API returned an empty manual-item response.");
     }
 
-    public async Task<UpdateDraftSaleInfoResponse> UpdateDraftSaleInfoAsync(
+    public async Task<IReadOnlyList<ProductSearchResultDto>> SearchProductsAsync(
+        string query,
+        int limit = 15,
+        bool exactOnly = false,
+        CancellationToken cancellationToken = default)
+    {
+        var url = $"api/products/search?query={Uri.EscapeDataString(query)}&limit={limit}&exactOnly={exactOnly.ToString().ToLowerInvariant()}";
+        using var response = await httpClient.GetAsync(url, cancellationToken);
+        response.EnsureSuccessStatusCode();
+
+        return await response.Content.ReadFromJsonAsync<ProductSearchResultDto[]>(
+                   JsonOptions,
+                   cancellationToken)
+               ?? [];
+    }
+
+    public async Task<IReadOnlyList<MeasurementUnitDto>> GetMeasurementUnitsAsync(
+        CancellationToken cancellationToken = default)
+    {
+        using var response = await httpClient.GetAsync(
+            "api/measurement-units",
+            cancellationToken);
+        response.EnsureSuccessStatusCode();
+
+        return await response.Content.ReadFromJsonAsync<MeasurementUnitDto[]>(
+                   JsonOptions,
+                   cancellationToken)
+               ?? [];
+    }
+
+    public async Task<AddProductSaleItemResponse> AddProductSaleItemAsync(
         long saleId,
-        UpdateDraftSaleInfoRequest request,
+        AddProductSaleItemRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        using var response = await httpClient.PostAsJsonAsync(
+            $"api/sales/{saleId}/items/product",
+            request,
+            JsonOptions,
+            cancellationToken);
+        response.EnsureSuccessStatusCode();
+
+        return await response.Content.ReadFromJsonAsync<AddProductSaleItemResponse>(
+                   JsonOptions,
+                   cancellationToken)
+               ?? throw new InvalidOperationException("The API returned an empty product-item response.");
+    }
+
+    public async Task<AddProductSaleItemResponse> CreateProductAndAddSaleItemAsync(
+        long saleId,
+        CreateProductAndAddSaleItemRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        using var response = await httpClient.PostAsJsonAsync(
+            $"api/sales/{saleId}/items/product/create",
+            request,
+            JsonOptions,
+            cancellationToken);
+        ThrowIfProductConflict(response);
+        response.EnsureSuccessStatusCode();
+
+        return await response.Content.ReadFromJsonAsync<AddProductSaleItemResponse>(
+                   JsonOptions,
+                   cancellationToken)
+               ?? throw new InvalidOperationException("The API returned an empty create-product response.");
+    }
+
+    public async Task<IReadOnlyList<CustomerDto>> SearchCustomersAsync(
+        string query,
+        int limit = 20,
+        CancellationToken cancellationToken = default)
+    {
+        var url = $"api/customers/search?query={Uri.EscapeDataString(query)}&limit={limit}";
+        using var response = await httpClient.GetAsync(url, cancellationToken);
+        response.EnsureSuccessStatusCode();
+
+        return await response.Content.ReadFromJsonAsync<CustomerDto[]>(
+                   JsonOptions,
+                   cancellationToken)
+               ?? [];
+    }
+
+    public async Task<CustomerDto> GetCustomerAsync(
+        long customerId,
+        CancellationToken cancellationToken = default)
+    {
+        using var response = await httpClient.GetAsync(
+            $"api/customers/{customerId}",
+            cancellationToken);
+        response.EnsureSuccessStatusCode();
+
+        return await ReadCustomerAsync(response, cancellationToken);
+    }
+
+    public async Task<CustomerDto> CreateCustomerAsync(
+        CreateCustomerRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        using var response = await httpClient.PostAsJsonAsync(
+            "api/customers",
+            request,
+            JsonOptions,
+            cancellationToken);
+        ThrowIfCustomerConflict(response);
+        response.EnsureSuccessStatusCode();
+
+        return await ReadCustomerAsync(response, cancellationToken);
+    }
+
+    public async Task<CustomerDto> UpdateCustomerAsync(
+        long customerId,
+        UpdateCustomerRequest request,
         CancellationToken cancellationToken = default)
     {
         using var response = await httpClient.PutAsJsonAsync(
-            $"api/sales/drafts/{saleId}/info",
+            $"api/customers/{customerId}",
             request,
+            JsonOptions,
+            cancellationToken);
+        ThrowIfCustomerConflict(response);
+        response.EnsureSuccessStatusCode();
+
+        return await ReadCustomerAsync(response, cancellationToken);
+    }
+
+    public async Task<SaleCustomerResponse> AssignCustomerToSaleAsync(
+        long saleId,
+        long customerId,
+        CancellationToken cancellationToken = default)
+    {
+        using var response = await httpClient.PutAsJsonAsync(
+            $"api/sales/{saleId}/customer",
+            new AssignCustomerToSaleRequest(customerId),
             JsonOptions,
             cancellationToken);
 
         response.EnsureSuccessStatusCode();
 
-        return await response.Content.ReadFromJsonAsync<UpdateDraftSaleInfoResponse>(
+        return await response.Content.ReadFromJsonAsync<SaleCustomerResponse>(
                    JsonOptions,
                    cancellationToken)
-               ?? throw new InvalidOperationException("The API returned an empty update-sale response.");
+               ?? throw new InvalidOperationException("The API returned an empty assign-customer response.");
+    }
+
+    public async Task<SaleCustomerResponse> RemoveCustomerFromSaleAsync(
+        long saleId,
+        CancellationToken cancellationToken = default)
+    {
+        using var response = await httpClient.DeleteAsync(
+            $"api/sales/{saleId}/customer",
+            cancellationToken);
+        response.EnsureSuccessStatusCode();
+
+        return await response.Content.ReadFromJsonAsync<SaleCustomerResponse>(
+                   JsonOptions,
+                   cancellationToken)
+               ?? throw new InvalidOperationException("The API returned an empty remove-customer response.");
+    }
+
+    public async Task<UpdateSaleCommentResponse> UpdateSaleCommentAsync(
+        long saleId,
+        string? comment,
+        CancellationToken cancellationToken = default)
+    {
+        using var response = await httpClient.PutAsJsonAsync(
+            $"api/sales/{saleId}/comment",
+            new UpdateSaleCommentRequest(comment),
+            JsonOptions,
+            cancellationToken);
+        response.EnsureSuccessStatusCode();
+
+        return await response.Content.ReadFromJsonAsync<UpdateSaleCommentResponse>(
+                   JsonOptions,
+                   cancellationToken)
+               ?? throw new InvalidOperationException("The API returned an empty update-comment response.");
     }
 
     public async Task<UpdateSaleItemResponse> UpdateSaleItemAsync(
@@ -246,6 +409,30 @@ public sealed class StorePosApiClient(HttpClient httpClient) : IStorePosApiClien
                    JsonOptions,
                    cancellationToken)
                ?? throw new InvalidOperationException("The API returned an empty reopen-sale response.");
+    }
+
+    private static async Task<CustomerDto> ReadCustomerAsync(
+        HttpResponseMessage response,
+        CancellationToken cancellationToken)
+        => await response.Content.ReadFromJsonAsync<CustomerDto>(
+               JsonOptions,
+               cancellationToken)
+           ?? throw new InvalidOperationException("The API returned an empty customer response.");
+
+    private static void ThrowIfCustomerConflict(HttpResponseMessage response)
+    {
+        if (response.StatusCode == HttpStatusCode.Conflict)
+        {
+            throw new CustomerConflictException();
+        }
+    }
+
+    private static void ThrowIfProductConflict(HttpResponseMessage response)
+    {
+        if (response.StatusCode == HttpStatusCode.Conflict)
+        {
+            throw new ProductConflictException();
+        }
     }
 
     private sealed class QueryStringBuilder

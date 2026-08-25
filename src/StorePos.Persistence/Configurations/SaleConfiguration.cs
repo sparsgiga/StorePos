@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using StorePos.Domain.Aggregates.Customer;
 using StorePos.Domain.Aggregates.Sale;
 using StorePos.Domain.Aggregates.User;
 
@@ -44,6 +45,12 @@ public sealed class SaleConfiguration : IEntityTypeConfiguration<Sale>
         builder.HasIndex(x => x.SaleNumber).IsUnique();
         builder.HasIndex(x => x.Status);
         builder.HasIndex(x => x.DateCreated);
+        builder.HasIndex(x => x.CustomerId);
+
+        builder.HasOne<Customer>()
+            .WithMany()
+            .HasForeignKey(x => x.CustomerId)
+            .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasOne<User>()
             .WithMany()

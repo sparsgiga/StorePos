@@ -1,4 +1,6 @@
+using System.Collections.ObjectModel;
 using StorePos.Desktop.Common;
+using StorePos.Desktop.Products.Models;
 using StorePos.Desktop.Sales.Calculations;
 
 namespace StorePos.Desktop.Sales.ViewModels;
@@ -16,6 +18,13 @@ public sealed class SaleItemInputViewModel : ObservableObject
     private bool _isUnitPriceReadOnly;
     private bool _isLineTotalReadOnly;
     private bool _isComplete;
+    private bool _canSubmit;
+    private bool _saveToCatalog;
+    private string? _barcode;
+    private MeasurementUnitDto? _selectedMeasurementUnit;
+    private bool _isProductNameReadOnly;
+
+    public ObservableCollection<MeasurementUnitDto> MeasurementUnits { get; } = [];
 
     public string? ProductName
     {
@@ -65,6 +74,45 @@ public sealed class SaleItemInputViewModel : ObservableObject
         set => SetProperty(ref _comment, value);
     }
 
+    public bool SaveToCatalog
+    {
+        get => _saveToCatalog;
+        set
+        {
+            if (SetProperty(ref _saveToCatalog, value))
+            {
+                OnPropertyChanged(nameof(IsCatalogDetailsVisible));
+                UpdateIsComplete();
+            }
+        }
+    }
+
+    public bool IsCatalogDetailsVisible => SaveToCatalog;
+
+    public string? Barcode
+    {
+        get => _barcode;
+        set => SetProperty(ref _barcode, value);
+    }
+
+    public MeasurementUnitDto? SelectedMeasurementUnit
+    {
+        get => _selectedMeasurementUnit;
+        set
+        {
+            if (SetProperty(ref _selectedMeasurementUnit, value))
+            {
+                UpdateIsComplete();
+            }
+        }
+    }
+
+    public bool IsProductNameReadOnly
+    {
+        get => _isProductNameReadOnly;
+        private set => SetProperty(ref _isProductNameReadOnly, value);
+    }
+
     public bool IsQuantityReadOnly
     {
         get => _isQuantityReadOnly;
@@ -89,11 +137,18 @@ public sealed class SaleItemInputViewModel : ObservableObject
         private set => SetProperty(ref _isComplete, value);
     }
 
+    public bool CanSubmit
+    {
+        get => _canSubmit;
+        private set => SetProperty(ref _canSubmit, value);
+    }
+
     public void Load(
         string productName,
         decimal quantity,
         decimal unitPrice,
-        string? comment)
+        string? comment,
+        bool isProductNameReadOnly = false)
     {
         Reset();
 
@@ -104,6 +159,7 @@ public sealed class SaleItemInputViewModel : ObservableObject
             Quantity = DecimalInputParser.Format(quantity);
             UnitPrice = DecimalInputParser.Format(unitPrice);
             Comment = comment;
+            IsProductNameReadOnly = isProductNameReadOnly;
         }
         finally
         {
@@ -125,6 +181,12 @@ public sealed class SaleItemInputViewModel : ObservableObject
             UnitPrice = string.Empty;
             LineTotal = string.Empty;
             Comment = null;
+            SaveToCatalog = false;
+            Barcode = null;
+            SelectedMeasurementUnit = MeasurementUnits.Count == 1
+                ? MeasurementUnits[0]
+                : null;
+            IsProductNameReadOnly = false;
         }
         finally
         {
@@ -132,6 +194,31 @@ public sealed class SaleItemInputViewModel : ObservableObject
         }
 
         UpdateIsComplete();
+    }
+
+    public void LoadMeasurementUnits(IEnumerable<MeasurementUnitDto> units)
+    {
+        MeasurementUnits.Clear();
+        foreach (var unit in units)
+        {
+            MeasurementUnits.Add(unit);
+        }
+
+        SelectedMeasurementUnit = MeasurementUnits.Count == 1
+            ? MeasurementUnits[0]
+            : null;
+    }
+
+    public void PrepareManualFallback(string value, bool isBarcode)
+    {
+        if (isBarcode)
+        {
+            Barcode = value;
+        }
+        else
+        {
+            ProductName = value;
+        }
     }
 
     public bool TryGetValues(
@@ -313,6 +400,7 @@ public sealed class SaleItemInputViewModel : ObservableObject
                      unitPrice >= 0 &&
                      DecimalInputParser.TryParse(LineTotal, out var lineTotal) &&
                      lineTotal >= 0;
+        CanSubmit = IsComplete && (!SaveToCatalog || SelectedMeasurementUnit is not null);
     }
 
     private static bool TryReadOptionalDecimal(

@@ -19,6 +19,7 @@
         <StackPanel Grid.Row="0" Margin="0,0,0,12">
             <TextBlock Margin="0,0,0,4" Text="დასახელება" />
             <TextBox Padding="8,6"
+                     IsReadOnly="{Binding Input.IsProductNameReadOnly}"
                      MaxLength="300"
                      Text="{Binding Input.ProductName, UpdateSourceTrigger=PropertyChanged}" />
         </StackPanel>

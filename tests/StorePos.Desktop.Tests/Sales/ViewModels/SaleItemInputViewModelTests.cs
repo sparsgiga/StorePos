@@ -1,4 +1,5 @@
 using StorePos.Desktop.Sales.ViewModels;
+using StorePos.Desktop.Products.Models;
 
 namespace StorePos.Desktop.Tests.Sales.ViewModels;
 
@@ -44,5 +45,36 @@ public sealed class SaleItemInputViewModelTests
         Assert.Equal("2", input.LineTotal);
         Assert.True(input.IsLineTotalReadOnly);
         Assert.True(input.IsComplete);
+    }
+
+    [Fact]
+    public void SaveToCatalog_RequiresMeasurementUnit()
+    {
+        var input = new SaleItemInputViewModel
+        {
+            ProductName = "Cement",
+            Quantity = "1",
+            UnitPrice = "0.444",
+            SaveToCatalog = true
+        };
+
+        Assert.True(input.IsComplete);
+        Assert.False(input.CanSubmit);
+
+        input.LoadMeasurementUnits([new MeasurementUnitDto(1, "Piece", "pc", null)]);
+
+        Assert.True(input.CanSubmit);
+        Assert.Equal(1, input.SelectedMeasurementUnit?.Id);
+    }
+
+    [Fact]
+    public void BarcodeFallback_DoesNotPutBarcodeIntoProductName()
+    {
+        var input = new SaleItemInputViewModel();
+
+        input.PrepareManualFallback("12345678", isBarcode: true);
+
+        Assert.Equal("12345678", input.Barcode);
+        Assert.Null(input.ProductName);
     }
 }

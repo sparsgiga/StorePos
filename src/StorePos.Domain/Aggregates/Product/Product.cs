@@ -4,6 +4,10 @@ namespace StorePos.Domain.Aggregates.Product;
 
 public sealed class Product : AuditableEntity<long>, IAggregateRoot
 {
+    public const int CodeMaxLength = 50;
+    public const int BarcodeMaxLength = 100;
+    public const int NameMaxLength = 300;
+
     private Product()
     {
     }
@@ -15,9 +19,53 @@ public sealed class Product : AuditableEntity<long>, IAggregateRoot
         int measurementUnitId,
         decimal price)
     {
-        Code = code;
-        Barcode = barcode;
-        Name = name;
+        var normalizedCode = code?.Trim();
+        var normalizedBarcode = string.IsNullOrWhiteSpace(barcode)
+            ? null
+            : barcode.Trim();
+        var normalizedName = name?.Trim();
+
+        if (string.IsNullOrWhiteSpace(normalizedCode))
+        {
+            throw new ArgumentException("Product code is required.", nameof(code));
+        }
+
+        if (normalizedCode.Length > CodeMaxLength)
+        {
+            throw new ArgumentException(
+                $"Product code cannot exceed {CodeMaxLength} characters.",
+                nameof(code));
+        }
+
+        if (normalizedBarcode?.Length > BarcodeMaxLength)
+        {
+            throw new ArgumentException(
+                $"Barcode cannot exceed {BarcodeMaxLength} characters.",
+                nameof(barcode));
+        }
+
+        if (string.IsNullOrWhiteSpace(normalizedName))
+        {
+            throw new ArgumentException("Product name is required.", nameof(name));
+        }
+
+        if (normalizedName.Length > NameMaxLength)
+        {
+            throw new ArgumentException(
+                $"Product name cannot exceed {NameMaxLength} characters.",
+                nameof(name));
+        }
+
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(measurementUnitId);
+
+        if (price < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(price), "Price cannot be negative.");
+        }
+
+        Code = normalizedCode;
+        Barcode = normalizedBarcode;
+        Name = normalizedName;
         MeasurementUnitId = measurementUnitId;
         Price = price;
         IsActive = true;

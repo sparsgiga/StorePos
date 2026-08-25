@@ -22,6 +22,44 @@ namespace StorePos.Persistence.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("StorePos.Domain.Aggregates.Customer.Customer", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime>("DateCreated")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DateUpdated")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("IdentificationNumber")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("Information")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IdentificationNumber")
+                        .IsUnique()
+                        .HasFilter("[IdentificationNumber] IS NOT NULL");
+
+                    b.HasIndex("Name");
+
+                    b.ToTable("Customers", "dbo");
+                });
+
             modelBuilder.Entity("StorePos.Domain.Aggregates.MeasurementUnit.MeasurementUnit", b =>
                 {
                     b.Property<int>("Id")
@@ -55,6 +93,192 @@ namespace StorePos.Persistence.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Units", "dbo");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            DateCreated = new DateTime(2026, 8, 25, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            Name = "ცალი",
+                            ShortName = "ც"
+                        },
+                        new
+                        {
+                            Id = 2,
+                            DateCreated = new DateTime(2026, 8, 25, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            Name = "კილოგრამი",
+                            ShortName = "კგ"
+                        },
+                        new
+                        {
+                            Id = 3,
+                            DateCreated = new DateTime(2026, 8, 25, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            Name = "მეტრი",
+                            ShortName = "მ"
+                        },
+                        new
+                        {
+                            Id = 4,
+                            DateCreated = new DateTime(2026, 8, 25, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            Name = "ლიტრი",
+                            ShortName = "ლ"
+                        },
+                        new
+                        {
+                            Id = 5,
+                            DateCreated = new DateTime(2026, 8, 25, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            Name = "გრამი",
+                            ShortName = "გრ"
+                        },
+                        new
+                        {
+                            Id = 6,
+                            DateCreated = new DateTime(2026, 8, 25, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            Name = "ტონა",
+                            ShortName = "ტ"
+                        },
+                        new
+                        {
+                            Id = 7,
+                            DateCreated = new DateTime(2026, 8, 25, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            Name = "წყვილი (2 ცალი)",
+                            ShortName = "წყ"
+                        },
+                        new
+                        {
+                            Id = 8,
+                            DateCreated = new DateTime(2026, 8, 25, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            Name = "სანტიმეტრი",
+                            ShortName = "სმ"
+                        },
+                        new
+                        {
+                            Id = 9,
+                            DateCreated = new DateTime(2026, 8, 25, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            Name = "კვადრატული მეტრი",
+                            ShortName = "კვ.მ"
+                        },
+                        new
+                        {
+                            Id = 10,
+                            DateCreated = new DateTime(2026, 8, 25, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            Name = "ყუთი",
+                            ShortName = "ყთ"
+                        },
+                        new
+                        {
+                            Id = 11,
+                            DateCreated = new DateTime(2026, 8, 25, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            Name = "ქილა",
+                            ShortName = "ქ"
+                        },
+                        new
+                        {
+                            Id = 12,
+                            DateCreated = new DateTime(2026, 8, 25, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            Name = "ბოთლი",
+                            ShortName = "ბთ"
+                        },
+                        new
+                        {
+                            Id = 13,
+                            DateCreated = new DateTime(2026, 8, 25, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            Name = "კილომეტრი",
+                            ShortName = "კმ"
+                        },
+                        new
+                        {
+                            Id = 14,
+                            DateCreated = new DateTime(2026, 8, 25, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            Name = "კვადრატული სანტიმეტრი",
+                            ShortName = "კვ.სმ"
+                        },
+                        new
+                        {
+                            Id = 15,
+                            DateCreated = new DateTime(2026, 8, 25, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            Name = "კუბური მეტრი",
+                            ShortName = "კბ.მ"
+                        },
+                        new
+                        {
+                            Id = 16,
+                            DateCreated = new DateTime(2026, 8, 25, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            Name = "მილილიტრი",
+                            ShortName = "მმ"
+                        },
+                        new
+                        {
+                            Id = 17,
+                            DateCreated = new DateTime(2026, 8, 25, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            Name = "სხვა",
+                            ShortName = "სხვ"
+                        },
+                        new
+                        {
+                            Id = 18,
+                            DateCreated = new DateTime(2026, 8, 25, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            Name = "ჭიქა",
+                            ShortName = "ჭიქა"
+                        },
+                        new
+                        {
+                            Id = 19,
+                            DateCreated = new DateTime(2026, 8, 25, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            Name = "კომპლექტი",
+                            ShortName = "კომპლექტი"
+                        },
+                        new
+                        {
+                            Id = 20,
+                            DateCreated = new DateTime(2026, 8, 25, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            Name = "რულონი",
+                            ShortName = "რულონი"
+                        },
+                        new
+                        {
+                            Id = 21,
+                            DateCreated = new DateTime(2026, 8, 25, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            Name = "ტომარა",
+                            ShortName = "ტომარა"
+                        },
+                        new
+                        {
+                            Id = 22,
+                            DateCreated = new DateTime(2026, 8, 25, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            Name = "შეკვრა",
+                            ShortName = "შეკვრა"
+                        },
+                        new
+                        {
+                            Id = 24,
+                            DateCreated = new DateTime(2026, 8, 25, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            Name = "მ³",
+                            ShortName = "მ³"
+                        });
                 });
 
             modelBuilder.Entity("StorePos.Domain.Aggregates.Product.Product", b =>
@@ -125,6 +349,9 @@ namespace StorePos.Persistence.Migrations
                         .HasMaxLength(4000)
                         .HasColumnType("nvarchar(4000)");
 
+                    b.Property<long?>("CustomerId")
+                        .HasColumnType("bigint");
+
                     b.Property<string>("CustomerIdentificationNumber")
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
@@ -166,6 +393,8 @@ namespace StorePos.Persistence.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("CashierId");
+
+                    b.HasIndex("CustomerId");
 
                     b.HasIndex("DateCreated");
 
@@ -336,6 +565,11 @@ namespace StorePos.Persistence.Migrations
                     b.HasOne("StorePos.Domain.Aggregates.User.User", null)
                         .WithMany()
                         .HasForeignKey("CashierId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("StorePos.Domain.Aggregates.Customer.Customer", null)
+                        .WithMany()
+                        .HasForeignKey("CustomerId")
                         .OnDelete(DeleteBehavior.Restrict);
                 });
 
