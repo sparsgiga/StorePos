@@ -6,7 +6,9 @@ public static class PaymentCalculator
 
     public static PaymentCalculation Calculate(
         decimal totalAmount,
-        IEnumerable<decimal> paymentAmounts)
+        IEnumerable<decimal> paymentAmounts,
+        bool allowDebt = false,
+        bool hasCustomer = false)
     {
         ArgumentNullException.ThrowIfNull(paymentAmounts);
 
@@ -16,11 +18,18 @@ public static class PaymentCalculator
         var roundedTotal = Round(totalAmount);
         var remainingAmount = Round(roundedTotal - paidAmount);
 
+        var hasActualDebt = remainingAmount > 0;
+        var canComplete = isValid &&
+                          remainingAmount >= 0 &&
+                          (allowDebt
+                              ? !hasActualDebt || hasCustomer
+                              : remainingAmount == 0);
+
         return new PaymentCalculation(
             paidAmount,
             remainingAmount,
             isValid,
-            isValid && paidAmount == roundedTotal);
+            canComplete);
     }
 
     private static decimal Round(decimal amount)

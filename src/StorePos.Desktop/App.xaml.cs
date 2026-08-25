@@ -2,6 +2,7 @@
 using System.Net.Http;
 using System.Windows;
 using StorePos.Desktop.Api;
+using StorePos.Desktop.Common;
 using StorePos.Desktop.Configuration;
 using StorePos.Desktop.History.Dialogs;
 using StorePos.Desktop.History.ViewModels;
@@ -26,7 +27,9 @@ public partial class App : Application
 
             var apiClient = new StorePosApiClient(_httpClient);
             var dialogService = new SalesDialogService(apiClient);
-            var historyDialogService = new HistoryDialogService();
+            var historyDialogService = new HistoryDialogService(
+                apiClient,
+                new WindowsClipboardService());
             var salesWorkspace = new SalesWorkspaceViewModel(apiClient, dialogService);
             var salesHistory = new SalesHistoryViewModel(apiClient, historyDialogService);
             var soldProducts = new SoldProductsViewModel(apiClient, historyDialogService);

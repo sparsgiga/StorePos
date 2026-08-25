@@ -12,16 +12,13 @@ namespace StorePos.IntegrationTests.Sales;
 
 public sealed class SalesHistoryReadWorkflowTests
 {
-    private static readonly TimeProvider TestTimeProvider =
-        new FixedTimeProvider(new DateTimeOffset(2026, 8, 25, 12, 0, 0, TimeSpan.Zero));
-
     [Fact]
     public async Task History_FiltersPaginatesAndSortsCompletedSales()
     {
         await using var context = CreateContext();
         var data = await SeedAsync(context);
         var handler = new GetSalesHistoryQueryHandler(
-            new SalesReadService(context, TestTimeProvider));
+            new SalesReadService(context));
 
         var firstPage = await handler.Handle(
             new GetSalesHistoryQuery(
@@ -55,7 +52,7 @@ public sealed class SalesHistoryReadWorkflowTests
         await using var context = CreateContext();
         await SeedAsync(context);
         var handler = new GetSalesHistoryQueryHandler(
-            new SalesReadService(context, TestTimeProvider));
+            new SalesReadService(context));
 
         var byNumber = await handler.Handle(
             new GetSalesHistoryQuery(SaleNumber: "0002"),
@@ -78,7 +75,7 @@ public sealed class SalesHistoryReadWorkflowTests
         await using var context = CreateContext();
         var data = await SeedAsync(context);
         var handler = new GetSaleDetailsQueryHandler(
-            new SalesReadService(context, TestTimeProvider));
+            new SalesReadService(context));
 
         var details = await handler.Handle(
             new GetSaleDetailsQuery(data.LatestCompletedId),
@@ -153,10 +150,4 @@ public sealed class SalesHistoryReadWorkflowTests
     }
 
     private sealed record SeededHistory(long EarlierCompletedId, long LatestCompletedId);
-
-    private sealed class FixedTimeProvider(DateTimeOffset now) : TimeProvider
-    {
-        public override TimeZoneInfo LocalTimeZone => TimeZoneInfo.Utc;
-        public override DateTimeOffset GetUtcNow() => now;
-    }
 }

@@ -12,6 +12,7 @@ public sealed record AddProductSaleItemResult(
     decimal Quantity,
     decimal UnitPrice,
     decimal LineTotal,
+    bool IsManual,
     decimal SaleTotalAmount,
     bool WasNewItem,
     string? Comment);

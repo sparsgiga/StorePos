@@ -32,6 +32,9 @@ public interface IStorePosApiClient
     Task<IReadOnlyList<MeasurementUnitDto>> GetMeasurementUnitsAsync(
         CancellationToken cancellationToken = default);
 
+    Task<ProductCreationDefaultsDto> GetProductCreationDefaultsAsync(
+        CancellationToken cancellationToken = default);
+
     Task<AddProductSaleItemResponse> AddProductSaleItemAsync(
         long saleId,
         AddProductSaleItemRequest request,
@@ -108,5 +111,10 @@ public interface IStorePosApiClient
 
     Task<ReopenSaleResponse> ReopenSaleAsync(
         long saleId,
+        CancellationToken cancellationToken = default);
+
+    Task<AddDebtPaymentResponse> AddDebtPaymentAsync(
+        long saleId,
+        AddDebtPaymentRequest request,
         CancellationToken cancellationToken = default);
 }

@@ -22,7 +22,11 @@ public sealed class SaleCompletionTests
         Assert.Null(sale.DateCancelled);
         var payment = Assert.Single(sale.Payments);
         Assert.Equal(PaymentType.Cash, payment.PaymentType);
+        Assert.Equal(SalePaymentKind.Completion, payment.PaymentKind);
         Assert.Equal(272m, payment.Amount);
+        Assert.Equal(272m, sale.PaidAmount);
+        Assert.Equal(0m, sale.OutstandingAmount);
+        Assert.False(sale.HasDebt);
     }
 
     [Fact]
@@ -92,6 +96,68 @@ public sealed class SaleCompletionTests
 
         Assert.Throws<InvalidOperationException>(() =>
             sale.Complete([], CompletionDate));
+    }
+
+    [Fact]
+    public void Complete_PartialCreditWithCustomer_CompletesWithDebt()
+    {
+        var sale = CreateSaleWithTotal(200m);
+        sale.AssignCustomer(10, "Customer", "01000000000");
+
+        sale.Complete(
+            [new SalePaymentAllocation(PaymentType.Cash, 100m)],
+            CompletionDate,
+            allowDebt: true);
+
+        Assert.Equal(SaleStatus.Completed, sale.Status);
+        Assert.Equal(100m, sale.PaidAmount);
+        Assert.Equal(100m, sale.OutstandingAmount);
+        Assert.True(sale.HasDebt);
+        Assert.Equal(SalePaymentKind.Completion, Assert.Single(sale.Payments).PaymentKind);
+    }
+
+    [Fact]
+    public void Complete_FullDebtWithCustomer_DoesNotCreateZeroPayment()
+    {
+        var sale = CreateSaleWithTotal(200m);
+        sale.AssignCustomer(10, "Customer", null);
+
+        sale.Complete([], CompletionDate, allowDebt: true);
+
+        Assert.Equal(SaleStatus.Completed, sale.Status);
+        Assert.Equal(0m, sale.PaidAmount);
+        Assert.Equal(200m, sale.OutstandingAmount);
+        Assert.True(sale.HasDebt);
+        Assert.Empty(sale.Payments);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(100)]
+    public void Complete_DebtWithoutAssignedCustomer_Throws(decimal paidAmount)
+    {
+        var sale = CreateSaleWithTotal(200m);
+        var payments = paidAmount == 0
+            ? Array.Empty<SalePaymentAllocation>()
+            : [new SalePaymentAllocation(PaymentType.Cash, paidAmount)];
+
+        Assert.Throws<InvalidOperationException>(() =>
+            sale.Complete(payments, CompletionDate, allowDebt: true));
+
+        Assert.Equal(SaleStatus.Draft, sale.Status);
+        Assert.Empty(sale.Payments);
+    }
+
+    [Fact]
+    public void Complete_OverpaymentWithDebtPermission_Throws()
+    {
+        var sale = CreateSaleWithTotal(200m);
+        sale.AssignCustomer(10, "Customer", null);
+
+        Assert.Throws<InvalidOperationException>(() => sale.Complete(
+            [new SalePaymentAllocation(PaymentType.Cash, 201m)],
+            CompletionDate,
+            allowDebt: true));
     }
 
     [Fact]

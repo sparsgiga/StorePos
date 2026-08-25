@@ -9,5 +9,6 @@ public sealed record CompleteSalePayment(
 
 public sealed record CompleteSaleCommand(
     long SaleId,
-    IReadOnlyCollection<CompleteSalePayment> Payments)
+    IReadOnlyCollection<CompleteSalePayment> Payments,
+    bool AllowDebt = false)
     : IRequest<CompleteSaleResult?>;

@@ -27,6 +27,18 @@ public sealed class ApiExceptionHandler(ILogger<ApiExceptionHandler> logger)
                 Title = "Product barcode already exists",
                 Detail = conflict.Message
             },
+            ProductCodeConflictException conflict => new ProblemDetails
+            {
+                Status = StatusCodes.Status409Conflict,
+                Title = "Product code already exists",
+                Detail = conflict.Message
+            },
+            SaleOperationConflictException conflict => new ProblemDetails
+            {
+                Status = StatusCodes.Status409Conflict,
+                Title = "Sale operation conflict",
+                Detail = conflict.Message
+            },
             ValidationException validation => new ValidationProblemDetails(
                 validation.Errors
                     .GroupBy(error => error.PropertyName)

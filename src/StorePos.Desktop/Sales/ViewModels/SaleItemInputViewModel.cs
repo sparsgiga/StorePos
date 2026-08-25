@@ -1,12 +1,15 @@
 using System.Collections.ObjectModel;
 using StorePos.Desktop.Common;
 using StorePos.Desktop.Products.Models;
+using StorePos.Desktop.Products.Barcodes;
 using StorePos.Desktop.Sales.Calculations;
+using System.Windows.Input;
 
 namespace StorePos.Desktop.Sales.ViewModels;
 
 public sealed class SaleItemInputViewModel : ObservableObject
 {
+    private readonly Ean13BarcodeGenerator _barcodeGenerator = new();
     private string? _productName;
     private string _quantity = string.Empty;
     private string _unitPrice = string.Empty;
@@ -21,8 +24,16 @@ public sealed class SaleItemInputViewModel : ObservableObject
     private bool _canSubmit;
     private bool _saveToCatalog;
     private string? _barcode;
+    private string _productCode = string.Empty;
+    private string? _catalogMessage;
+    private bool _isLoadingCatalogDefaults;
     private MeasurementUnitDto? _selectedMeasurementUnit;
     private bool _isProductNameReadOnly;
+
+    public SaleItemInputViewModel()
+    {
+        GenerateBarcodeCommand = new RelayCommand(GenerateBarcode);
+    }
 
     public ObservableCollection<MeasurementUnitDto> MeasurementUnits { get; } = [];
 
@@ -89,11 +100,43 @@ public sealed class SaleItemInputViewModel : ObservableObject
 
     public bool IsCatalogDetailsVisible => SaveToCatalog;
 
+    public string ProductCode
+    {
+        get => _productCode;
+        set
+        {
+            if (SetProperty(ref _productCode, value ?? string.Empty))
+            {
+                UpdateIsComplete();
+            }
+        }
+    }
+
     public string? Barcode
     {
         get => _barcode;
         set => SetProperty(ref _barcode, value);
     }
+
+    public string? CatalogMessage
+    {
+        get => _catalogMessage;
+        private set => SetProperty(ref _catalogMessage, value);
+    }
+
+    public bool IsLoadingCatalogDefaults
+    {
+        get => _isLoadingCatalogDefaults;
+        private set
+        {
+            if (SetProperty(ref _isLoadingCatalogDefaults, value))
+            {
+                UpdateIsComplete();
+            }
+        }
+    }
+
+    public ICommand GenerateBarcodeCommand { get; }
 
     public MeasurementUnitDto? SelectedMeasurementUnit
     {
@@ -182,7 +225,10 @@ public sealed class SaleItemInputViewModel : ObservableObject
             LineTotal = string.Empty;
             Comment = null;
             SaveToCatalog = false;
+            ProductCode = string.Empty;
             Barcode = null;
+            CatalogMessage = null;
+            IsLoadingCatalogDefaults = false;
             SelectedMeasurementUnit = MeasurementUnits.Count == 1
                 ? MeasurementUnits[0]
                 : null;
@@ -207,6 +253,43 @@ public sealed class SaleItemInputViewModel : ObservableObject
         SelectedMeasurementUnit = MeasurementUnits.Count == 1
             ? MeasurementUnits[0]
             : null;
+    }
+
+    public void SetCatalogDefaultsLoading(bool isLoading)
+    {
+        IsLoadingCatalogDefaults = isLoading;
+        if (isLoading)
+        {
+            CatalogMessage = null;
+        }
+    }
+
+    public void ApplyCreationDefaults(ProductCreationDefaultsDto defaults)
+    {
+        if (string.IsNullOrWhiteSpace(ProductCode))
+        {
+            ProductCode = defaults.SuggestedCode;
+        }
+
+        if (defaults.DefaultMeasurementUnitId.HasValue)
+        {
+            SelectedMeasurementUnit = MeasurementUnits.FirstOrDefault(unit =>
+                unit.Id == defaults.DefaultMeasurementUnitId.Value);
+        }
+
+        CatalogMessage = defaults.ConfigurationMessage;
+        if (defaults.DefaultMeasurementUnitId.HasValue && SelectedMeasurementUnit is null)
+        {
+            CatalogMessage = "ნაგულისხმევი საზომი ერთეული აქტიურ სიაში ვერ მოიძებნა.";
+        }
+
+        IsLoadingCatalogDefaults = false;
+    }
+
+    public void SetCatalogError(string message)
+    {
+        CatalogMessage = message;
+        IsLoadingCatalogDefaults = false;
     }
 
     public void PrepareManualFallback(string value, bool isBarcode)
@@ -400,7 +483,28 @@ public sealed class SaleItemInputViewModel : ObservableObject
                      unitPrice >= 0 &&
                      DecimalInputParser.TryParse(LineTotal, out var lineTotal) &&
                      lineTotal >= 0;
-        CanSubmit = IsComplete && (!SaveToCatalog || SelectedMeasurementUnit is not null);
+        var normalizedCode = ProductCode.Trim();
+        var hasValidProductCode = normalizedCode.Length is > 0 and <= 50 &&
+                                  normalizedCode.All(character =>
+                                      character is >= '0' and <= '9');
+        CanSubmit = IsComplete &&
+                    (!SaveToCatalog ||
+                     !IsLoadingCatalogDefaults &&
+                     SelectedMeasurementUnit is not null &&
+                     hasValidProductCode);
+    }
+
+    private void GenerateBarcode()
+    {
+        try
+        {
+            Barcode = _barcodeGenerator.Generate(ProductCode);
+            CatalogMessage = null;
+        }
+        catch (ArgumentException exception)
+        {
+            CatalogMessage = exception.Message;
+        }
     }
 
     private static bool TryReadOptionalDecimal(

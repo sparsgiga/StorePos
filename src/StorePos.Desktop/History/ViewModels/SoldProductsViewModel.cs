@@ -237,7 +237,7 @@ public sealed class SoldProductsViewModel : ObservableObject, IDisposable
             var details = await _apiClient.GetSaleDetailsAsync(
                 item.SaleId,
                 _lifetimeCancellation.Token);
-            _dialogService.ShowSaleDetails(details);
+            _dialogService.ShowSaleDetails(details, _lifetimeCancellation.Token);
         }
         catch (OperationCanceledException) when (_lifetimeCancellation.IsCancellationRequested)
         {

@@ -14,6 +14,12 @@ public sealed class SaleLifecycleWorkflowTests
 {
     private static readonly DateTimeOffset FixedNow =
         new(2026, 8, 25, 15, 0, 0, TimeSpan.Zero);
+    private static readonly TimeZoneInfo TestLocalTimeZone =
+        TimeZoneInfo.CreateCustomTimeZone(
+            "Test +04",
+            TimeSpan.FromHours(4),
+            "Test +04",
+            "Test +04");
 
     [Fact]
     public async Task CompleteSale_PersistsPaymentsAndDoesNotReturnAfterRestart()
@@ -58,18 +64,22 @@ public sealed class SaleLifecycleWorkflowTests
                 .SingleAsync(sale => sale.Id == saleId);
 
             Assert.Equal(SaleStatus.Completed, persistedSale.Status);
-            Assert.Equal(FixedNow.UtcDateTime, persistedSale.DateCompleted);
+            Assert.Equal(
+                FixedNow.ToOffset(TimeSpan.FromHours(4)).DateTime,
+                persistedSale.DateCompleted);
             Assert.Equal(2, persistedSale.Items.Count);
             Assert.Collection(
                 persistedSale.Payments.OrderBy(payment => payment.PaymentType),
                 payment =>
                 {
                     Assert.Equal(PaymentType.Cash, payment.PaymentType);
+                    Assert.Equal(SalePaymentKind.Completion, payment.PaymentKind);
                     Assert.Equal(100m, payment.Amount);
                 },
                 payment =>
                 {
                     Assert.Equal(PaymentType.Card, payment.PaymentType);
+                    Assert.Equal(SalePaymentKind.Completion, payment.PaymentKind);
                     Assert.Equal(172m, payment.Amount);
                 });
 
@@ -119,7 +129,9 @@ public sealed class SaleLifecycleWorkflowTests
                 .SingleAsync(sale => sale.Id == saleId);
 
             Assert.Equal(SaleStatus.Cancelled, persistedSale.Status);
-            Assert.Equal(FixedNow.UtcDateTime, persistedSale.DateCancelled);
+            Assert.Equal(
+                FixedNow.ToOffset(TimeSpan.FromHours(4)).DateTime,
+                persistedSale.DateCancelled);
             Assert.Null(persistedSale.DateCompleted);
             Assert.Equal(itemId, Assert.Single(persistedSale.Items).Id);
             Assert.Equal(1, await restartedContext.Sales.CountAsync());
@@ -140,6 +152,8 @@ public sealed class SaleLifecycleWorkflowTests
 
     private sealed class FixedTimeProvider(DateTimeOffset utcNow) : TimeProvider
     {
+        public override TimeZoneInfo LocalTimeZone => TestLocalTimeZone;
+
         public override DateTimeOffset GetUtcNow() => utcNow;
     }
 }

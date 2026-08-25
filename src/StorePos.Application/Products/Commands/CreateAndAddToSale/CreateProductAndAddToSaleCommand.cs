@@ -6,6 +6,7 @@ namespace StorePos.Application.Products.Commands.CreateAndAddToSale;
 
 public sealed record CreateProductAndAddToSaleCommand(
     long SaleId,
+    string ProductCode,
     string Name,
     string? Barcode,
     int MeasurementUnitId,

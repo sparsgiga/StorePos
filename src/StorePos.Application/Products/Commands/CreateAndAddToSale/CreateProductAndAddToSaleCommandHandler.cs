@@ -13,7 +13,6 @@ public sealed class CreateProductAndAddToSaleCommandHandler(
     ISaleRepository saleRepository,
     IProductRepository productRepository,
     IMeasurementUnitRepository measurementUnitRepository,
-    IProductCodeGenerator productCodeGenerator,
     IUnitOfWork unitOfWork)
     : IRequestHandler<CreateProductAndAddToSaleCommand, AddProductSaleItemResult?>
 {
@@ -40,6 +39,13 @@ public sealed class CreateProductAndAddToSaleCommandHandler(
         var barcode = string.IsNullOrWhiteSpace(request.Barcode)
             ? null
             : request.Barcode.Trim();
+        var productCode = request.ProductCode.Trim();
+
+        if (await productRepository.GetByCodeAsync(productCode, cancellationToken) is not null)
+        {
+            throw new ProductCodeConflictException(productCode);
+        }
+
         if (barcode is not null &&
             await productRepository.GetByBarcodeAsync(barcode, cancellationToken) is not null)
         {
@@ -47,7 +53,7 @@ public sealed class CreateProductAndAddToSaleCommandHandler(
         }
 
         var product = Product.Create(
-            productCodeGenerator.Generate(),
+            productCode,
             barcode,
             request.Name,
             measurementUnit.Id,

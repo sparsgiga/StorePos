@@ -44,11 +44,10 @@ public sealed class SaleRepository(StorePosDbContext context)
                 sale => sale.Id == saleId && sale.Status == SaleStatus.Draft,
                 cancellationToken);
 
-    public Task<Sale?> GetCompletedForReopenAsync(
+    public Task<Sale?> GetCompletedForUpdateAsync(
         long saleId,
         CancellationToken cancellationToken = default)
         => Entities
-            .Include(sale => sale.Items)
             .Include(sale => sale.Payments)
             .SingleOrDefaultAsync(
                 sale => sale.Id == saleId && sale.Status == SaleStatus.Completed,

@@ -111,6 +111,21 @@ public sealed class StorePosApiClient(HttpClient httpClient) : IStorePosApiClien
                ?? [];
     }
 
+    public async Task<ProductCreationDefaultsDto> GetProductCreationDefaultsAsync(
+        CancellationToken cancellationToken = default)
+    {
+        using var response = await httpClient.GetAsync(
+            "api/products/creation-defaults",
+            cancellationToken);
+        response.EnsureSuccessStatusCode();
+
+        return await response.Content.ReadFromJsonAsync<ProductCreationDefaultsDto>(
+                   JsonOptions,
+                   cancellationToken)
+               ?? throw new InvalidOperationException(
+                   "The API returned an empty product-creation-defaults response.");
+    }
+
     public async Task<AddProductSaleItemResponse> AddProductSaleItemAsync(
         long saleId,
         AddProductSaleItemRequest request,
@@ -139,7 +154,7 @@ public sealed class StorePosApiClient(HttpClient httpClient) : IStorePosApiClien
             request,
             JsonOptions,
             cancellationToken);
-        ThrowIfProductConflict(response);
+        await ThrowIfProductConflictAsync(response, cancellationToken);
         response.EnsureSuccessStatusCode();
 
         return await response.Content.ReadFromJsonAsync<AddProductSaleItemResponse>(
@@ -306,6 +321,7 @@ public sealed class StorePosApiClient(HttpClient httpClient) : IStorePosApiClien
             JsonOptions,
             cancellationToken);
 
+        await ThrowIfSaleOperationConflictAsync(response, cancellationToken);
         response.EnsureSuccessStatusCode();
 
         return await response.Content.ReadFromJsonAsync<CompleteSaleResponse>(
@@ -403,12 +419,32 @@ public sealed class StorePosApiClient(HttpClient httpClient) : IStorePosApiClien
             $"api/sales/{saleId}/reopen",
             content: null,
             cancellationToken);
+        await ThrowIfSaleOperationConflictAsync(response, cancellationToken);
         response.EnsureSuccessStatusCode();
 
         return await response.Content.ReadFromJsonAsync<ReopenSaleResponse>(
                    JsonOptions,
                    cancellationToken)
                ?? throw new InvalidOperationException("The API returned an empty reopen-sale response.");
+    }
+
+    public async Task<AddDebtPaymentResponse> AddDebtPaymentAsync(
+        long saleId,
+        AddDebtPaymentRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        using var response = await httpClient.PostAsJsonAsync(
+            $"api/sales/{saleId}/debt-payments",
+            request,
+            JsonOptions,
+            cancellationToken);
+        await ThrowIfSaleOperationConflictAsync(response, cancellationToken);
+        response.EnsureSuccessStatusCode();
+
+        return await response.Content.ReadFromJsonAsync<AddDebtPaymentResponse>(
+                   JsonOptions,
+                   cancellationToken)
+               ?? throw new InvalidOperationException("The API returned an empty debt-payment response.");
     }
 
     private static async Task<CustomerDto> ReadCustomerAsync(
@@ -427,13 +463,42 @@ public sealed class StorePosApiClient(HttpClient httpClient) : IStorePosApiClien
         }
     }
 
-    private static void ThrowIfProductConflict(HttpResponseMessage response)
+    private static async Task ThrowIfProductConflictAsync(
+        HttpResponseMessage response,
+        CancellationToken cancellationToken)
     {
-        if (response.StatusCode == HttpStatusCode.Conflict)
+        if (response.StatusCode != HttpStatusCode.Conflict)
         {
-            throw new ProductConflictException();
+            return;
         }
+
+        var problem = await response.Content.ReadFromJsonAsync<ApiProblemDetails>(
+            JsonOptions,
+            cancellationToken);
+        var kind = problem?.Title?.Contains("code", StringComparison.OrdinalIgnoreCase) == true
+            ? ProductConflictKind.Code
+            : ProductConflictKind.Barcode;
+
+        throw new ProductConflictException(kind);
     }
+
+    private static async Task ThrowIfSaleOperationConflictAsync(
+        HttpResponseMessage response,
+        CancellationToken cancellationToken)
+    {
+        if (response.StatusCode != HttpStatusCode.Conflict)
+        {
+            return;
+        }
+
+        var problem = await response.Content.ReadFromJsonAsync<ApiProblemDetails>(
+            JsonOptions,
+            cancellationToken);
+        throw new SaleOperationException(
+            problem?.Detail ?? "The sale operation conflicts with its current state.");
+    }
+
+    private sealed record ApiProblemDetails(string? Title, string? Detail);
 
     private sealed class QueryStringBuilder
     {

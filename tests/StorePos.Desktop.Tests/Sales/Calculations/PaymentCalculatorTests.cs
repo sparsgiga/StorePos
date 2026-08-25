@@ -57,4 +57,39 @@ public sealed class PaymentCalculatorTests
         Assert.True(result.CanComplete);
         Assert.Equal(0m, result.RemainingAmount);
     }
+
+    [Fact]
+    public void CreditWithCustomer_AllowsPartialAndZeroPayment()
+    {
+        var partial = PaymentCalculator.Calculate(
+            200m, [100m], allowDebt: true, hasCustomer: true);
+        var fullDebt = PaymentCalculator.Calculate(
+            200m, [], allowDebt: true, hasCustomer: true);
+
+        Assert.True(partial.CanComplete);
+        Assert.Equal(100m, partial.RemainingAmount);
+        Assert.True(fullDebt.CanComplete);
+        Assert.Equal(200m, fullDebt.RemainingAmount);
+    }
+
+    [Fact]
+    public void CreditWithoutCustomer_CannotLeaveOutstandingAmount()
+    {
+        var partial = PaymentCalculator.Calculate(
+            200m, [100m], allowDebt: true, hasCustomer: false);
+        var fullyPaid = PaymentCalculator.Calculate(
+            200m, [200m], allowDebt: true, hasCustomer: false);
+
+        Assert.False(partial.CanComplete);
+        Assert.True(fullyPaid.CanComplete);
+    }
+
+    [Fact]
+    public void CreditStillRejectsOverpayment()
+    {
+        var result = PaymentCalculator.Calculate(
+            200m, [201m], allowDebt: true, hasCustomer: true);
+
+        Assert.False(result.CanComplete);
+    }
 }

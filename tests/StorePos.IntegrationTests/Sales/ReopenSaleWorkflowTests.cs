@@ -78,16 +78,11 @@ public sealed class ReopenSaleWorkflowTests
             Assert.Equal(saleId, Assert.Single(drafts).Id);
 
             var history = await new GetSalesHistoryQueryHandler(
-                    new SalesReadService(restartedContext, new UtcTimeProvider()))
+                    new SalesReadService(restartedContext))
                 .Handle(
                     new GetSalesHistoryQuery(Status: SaleStatus.Completed),
                     CancellationToken.None);
             Assert.Empty(history.Items);
         }
-    }
-
-    private sealed class UtcTimeProvider : TimeProvider
-    {
-        public override TimeZoneInfo LocalTimeZone => TimeZoneInfo.Utc;
     }
 }

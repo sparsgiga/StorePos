@@ -16,4 +16,7 @@ public sealed record SalesHistoryItemModel(
     decimal CashAmount,
     decimal CardAmount,
     decimal BankTransferAmount,
-    decimal OtherAmount);
+    decimal OtherAmount,
+    decimal PaidAmount,
+    decimal OutstandingAmount,
+    bool HasDebt);

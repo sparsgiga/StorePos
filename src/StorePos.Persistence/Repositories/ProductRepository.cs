@@ -20,4 +20,11 @@ public sealed class ProductRepository(StorePosDbContext context)
         => Entities
             .AsNoTracking()
             .FirstOrDefaultAsync(product => product.Barcode == barcode, cancellationToken);
+
+    public Task<Product?> GetByCodeAsync(
+        string code,
+        CancellationToken cancellationToken = default)
+        => Entities
+            .AsNoTracking()
+            .SingleOrDefaultAsync(product => product.Code == code, cancellationToken);
 }

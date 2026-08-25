@@ -69,7 +69,8 @@ public sealed class SalesController(ISender sender) : ControllerBase
                 saleId,
                 request.Payments.Select(payment => new CompleteSalePayment(
                     payment.PaymentType,
-                    payment.Amount)).ToArray()),
+                    payment.Amount)).ToArray(),
+                request.AllowDebt),
             cancellationToken);
         return result is null ? NotFound() : Ok(result);
     }

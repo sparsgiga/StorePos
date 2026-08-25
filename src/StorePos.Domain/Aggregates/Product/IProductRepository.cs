@@ -13,4 +13,8 @@ public interface IProductRepository :
     Task<Product?> GetByBarcodeAsync(
         string barcode,
         CancellationToken cancellationToken = default);
+
+    Task<Product?> GetByCodeAsync(
+        string code,
+        CancellationToken cancellationToken = default);
 }

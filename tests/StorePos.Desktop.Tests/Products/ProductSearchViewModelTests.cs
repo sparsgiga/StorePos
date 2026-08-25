@@ -55,7 +55,7 @@ public sealed class ProductSearchViewModelTests
                     {
                         new ProductSearchResultDto(
                             10,
-                            "PRD-10",
+                            "10",
                             "12345678",
                             "Cement",
                             1,
@@ -76,7 +76,7 @@ public sealed class ProductSearchViewModelTests
                         5,
                         20,
                         10,
-                        "PRD-10",
+                        "10",
                         "12345678",
                         "Cement",
                         1,
@@ -84,6 +84,7 @@ public sealed class ProductSearchViewModelTests
                         1m,
                         3.50m,
                         3.50m,
+                        false,
                         3.50m,
                         true,
                         null))

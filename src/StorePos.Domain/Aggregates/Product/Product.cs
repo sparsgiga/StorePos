@@ -37,6 +37,13 @@ public sealed class Product : AuditableEntity<long>, IAggregateRoot
                 nameof(code));
         }
 
+        if (normalizedCode.Any(character => character is < '0' or > '9'))
+        {
+            throw new ArgumentException(
+                "Product code must contain ASCII digits only.",
+                nameof(code));
+        }
+
         if (normalizedBarcode?.Length > BarcodeMaxLength)
         {
             throw new ArgumentException(

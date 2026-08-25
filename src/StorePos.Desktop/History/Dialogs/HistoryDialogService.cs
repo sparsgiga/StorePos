@@ -1,18 +1,52 @@
 using System.Windows;
+using StorePos.Desktop.Api;
+using StorePos.Desktop.Common;
 using StorePos.Desktop.History.Models;
+using StorePos.Desktop.History.ViewModels;
 using StorePos.Desktop.History.Views;
 
 namespace StorePos.Desktop.History.Dialogs;
 
-public sealed class HistoryDialogService : IHistoryDialogService
+public sealed class HistoryDialogService(
+    IStorePosApiClient apiClient,
+    IClipboardService clipboardService) : IHistoryDialogService
 {
-    public void ShowSaleDetails(SaleDetailsDto sale)
+    public bool ShowSaleDetails(
+        SaleDetailsDto sale,
+        CancellationToken cancellationToken = default)
     {
-        var dialog = new SaleDetailsDialog(sale)
+        var viewModel = new SaleDetailsDialogViewModel(
+            sale,
+            clipboardService,
+            this,
+            cancellationToken);
+        var dialog = new SaleDetailsDialog(viewModel)
         {
             Owner = Application.Current.MainWindow
         };
         dialog.ShowDialog();
+        return viewModel.HasFinancialChanges;
+    }
+
+    public AddDebtPaymentResponse? ShowDebtPayment(
+        long saleId,
+        decimal outstandingAmount,
+        CancellationToken cancellationToken = default)
+    {
+        var viewModel = new DebtPaymentDialogViewModel(
+            apiClient,
+            saleId,
+            outstandingAmount,
+            cancellationToken);
+        var dialog = new DebtPaymentDialog(viewModel)
+        {
+            Owner = Application.Current.Windows
+                .OfType<Window>()
+                .FirstOrDefault(window => window.IsActive)
+                ?? Application.Current.MainWindow
+        };
+
+        return dialog.ShowDialog() == true ? viewModel.Result : null;
     }
 
     public bool ConfirmReopen(SalesHistoryItemDto sale)

@@ -11,10 +11,15 @@ public sealed class SalePayment : AuditableEntity<long>
     {
     }
 
-    private SalePayment(long saleId, PaymentType paymentType, decimal amount)
+    private SalePayment(
+        long saleId,
+        PaymentType paymentType,
+        SalePaymentKind paymentKind,
+        decimal amount)
     {
         SaleId = saleId;
         PaymentType = paymentType;
+        PaymentKind = paymentKind;
         Amount = amount;
     }
 
@@ -22,9 +27,15 @@ public sealed class SalePayment : AuditableEntity<long>
 
     public PaymentType PaymentType { get; private set; }
 
+    public SalePaymentKind PaymentKind { get; private set; }
+
     public decimal Amount { get; private set; }
 
-    internal static SalePayment Create(long saleId, PaymentType paymentType, decimal amount)
+    internal static SalePayment Create(
+        long saleId,
+        PaymentType paymentType,
+        SalePaymentKind paymentKind,
+        decimal amount)
     {
         if (!Enum.IsDefined(paymentType))
         {
@@ -33,16 +44,24 @@ public sealed class SalePayment : AuditableEntity<long>
                 "Payment type is not supported.");
         }
 
-        if (amount < 0)
+        if (!Enum.IsDefined(paymentKind))
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(paymentKind),
+                "Payment kind is not supported.");
+        }
+
+        var roundedAmount = RoundAmount(amount);
+        if (roundedAmount <= 0)
         {
             throw new ArgumentOutOfRangeException(
                 nameof(amount),
-                "Payment amount cannot be negative.");
+                "Payment amount must be greater than zero.");
         }
 
-        return new SalePayment(saleId, paymentType, RoundAmount(amount));
+        return new SalePayment(saleId, paymentType, paymentKind, roundedAmount);
     }
 
-    internal static decimal RoundAmount(decimal amount)
+    public static decimal RoundAmount(decimal amount)
         => decimal.Round(amount, AmountScale, MidpointRounding.AwayFromZero);
 }

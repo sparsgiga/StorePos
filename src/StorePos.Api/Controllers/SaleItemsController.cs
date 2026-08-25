@@ -35,6 +35,7 @@ public sealed class SaleItemsController(ISender sender) : ControllerBase
         var result = await sender.Send(
             new CreateProductAndAddToSaleCommand(
                 saleId,
+                request.ProductCode,
                 request.Name,
                 request.Barcode,
                 request.MeasurementUnitId,

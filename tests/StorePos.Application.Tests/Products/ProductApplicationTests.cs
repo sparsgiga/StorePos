@@ -1,7 +1,8 @@
 using StorePos.Application.Common.Behaviors;
 using StorePos.Application.Common.Interfaces;
+using StorePos.Application.Products.Commands.CreateAndAddToSale;
+using StorePos.Application.Products.Queries.GetCreationDefaults;
 using StorePos.Application.Products.Queries.Search;
-using StorePos.Application.Products.Services;
 using StorePos.Domain.Interfaces;
 
 namespace StorePos.Application.Tests.Products;
@@ -39,18 +40,49 @@ public sealed class ProductApplicationTests
     }
 
     [Fact]
-    public void ProductCodeGenerator_ReturnsExpectedUniqueFormat()
+    public async Task CreationDefaults_ReturnsPersistenceSuggestionAndSemanticUnit()
     {
-        var generator = new GuidProductCodeGenerator();
+        var expected = new ProductCreationDefaultsResult(
+            "10526",
+            24,
+            "ცალი",
+            "ც",
+            null);
+        var handler = new GetProductCreationDefaultsQueryHandler(
+            new StubProductCreationDefaultsReadService(expected));
 
-        var first = generator.Generate();
-        var second = generator.Generate();
+        var result = await handler.Handle(
+            new GetProductCreationDefaultsQuery(),
+            CancellationToken.None);
 
-        Assert.StartsWith(GuidProductCodeGenerator.Prefix, first);
-        Assert.Equal(36, first.Length);
-        Assert.Equal(first.ToUpperInvariant(), first);
-        Assert.NotEqual(first, second);
-        Assert.True(Guid.TryParseExact(first[GuidProductCodeGenerator.Prefix.Length..], "N", out _));
+        Assert.Equal(expected, result);
+    }
+
+    [Fact]
+    public void CreateProductValidator_AllowsNumericOverrideAndRejectsNonnumericCode()
+    {
+        var validator = new CreateProductAndAddToSaleCommandValidator();
+
+        var valid = validator.Validate(new CreateProductAndAddToSaleCommand(
+            1,
+            "20000",
+            "Cement",
+            null,
+            24,
+            1m,
+            2m));
+        var invalid = validator.Validate(new CreateProductAndAddToSaleCommand(
+            1,
+            "PRD-1",
+            "Cement",
+            null,
+            24,
+            1m,
+            2m));
+
+        Assert.True(valid.IsValid);
+        Assert.False(invalid.IsValid);
+        Assert.Contains(invalid.Errors, error => error.PropertyName == "ProductCode");
     }
 
     [Fact]
@@ -101,6 +133,15 @@ public sealed class ProductApplicationTests
             ExactOnly = exactOnly;
             return Task.FromResult<IReadOnlyList<ProductSearchResult>>([]);
         }
+    }
+
+    private sealed class StubProductCreationDefaultsReadService(
+        ProductCreationDefaultsResult result)
+        : IProductCreationDefaultsReadService
+    {
+        public Task<ProductCreationDefaultsResult> GetAsync(
+            CancellationToken cancellationToken = default)
+            => Task.FromResult(result);
     }
 
     private sealed record TransactionalRequest : ITransactionalRequest;

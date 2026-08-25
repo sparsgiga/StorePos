@@ -10,6 +10,11 @@ public sealed class CreateProductAndAddToSaleCommandValidator
     public CreateProductAndAddToSaleCommandValidator()
     {
         RuleFor(command => command.SaleId).GreaterThan(0);
+        RuleFor(command => command.ProductCode)
+            .NotEmpty()
+            .MaximumLength(Product.CodeMaxLength)
+            .Matches("^[0-9]+$")
+            .WithMessage("Product code must contain digits only.");
         RuleFor(command => command.Name)
             .NotEmpty()
             .MaximumLength(Product.NameMaxLength);

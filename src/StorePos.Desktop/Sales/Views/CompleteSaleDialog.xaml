@@ -14,6 +14,7 @@
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
         <Border Grid.Row="0"
@@ -79,20 +80,26 @@
                 <TextBlock Grid.Row="0" Grid.Column="1"
                            FontWeight="SemiBold"
                            Text="{Binding PaidAmount, StringFormat={}{0:N2} ₾}" />
-                <TextBlock Grid.Row="1" Margin="0,6,0,0" Text="დარჩენილი" />
+                <TextBlock Grid.Row="1" Margin="0,6,0,0" Text="{Binding RemainingLabel}" />
                 <TextBlock Grid.Row="1" Grid.Column="1" Margin="0,6,0,0"
                            FontWeight="SemiBold"
                            Text="{Binding RemainingAmount, StringFormat={}{0:N2} ₾}" />
             </Grid>
         </Border>
 
-        <TextBlock Grid.Row="3"
+        <CheckBox Grid.Row="3"
+                  Margin="0,0,0,10"
+                  FontWeight="SemiBold"
+                  Content="ვალად"
+                  IsChecked="{Binding AllowDebt}" />
+
+        <TextBlock Grid.Row="4"
                    Margin="0,0,0,12"
                    Foreground="#B42318"
                    Text="{Binding ErrorMessage}"
                    TextWrapping="Wrap" />
 
-        <StackPanel Grid.Row="4"
+        <StackPanel Grid.Row="5"
                     HorizontalAlignment="Right"
                     Orientation="Horizontal">
             <Button MinWidth="100"

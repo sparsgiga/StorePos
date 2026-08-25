@@ -238,7 +238,13 @@ public sealed class SalesHistoryViewModel : ObservableObject, IDisposable
             var details = await _apiClient.GetSaleDetailsAsync(
                 sale.Id,
                 _lifetimeCancellation.Token);
-            _dialogService.ShowSaleDetails(details);
+            var hasFinancialChanges = _dialogService.ShowSaleDetails(
+                details,
+                _lifetimeCancellation.Token);
+            if (hasFinancialChanges)
+            {
+                await LoadPageAsync();
+            }
         }
         catch (OperationCanceledException) when (_lifetimeCancellation.IsCancellationRequested)
         {
@@ -281,6 +287,11 @@ public sealed class SalesHistoryViewModel : ObservableObject, IDisposable
         }
         catch (OperationCanceledException) when (_lifetimeCancellation.IsCancellationRequested)
         {
+        }
+        catch (SaleOperationException exception)
+        {
+            Trace.TraceWarning(exception.ToString());
+            ErrorMessage = "ამ გაყიდვაზე უკვე დაფიქსირებულია ვალის შემდგომი გადახდა და Draft-ზე დაბრუნება აღარ შეიძლება.";
         }
         catch (Exception exception)
         {

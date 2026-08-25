@@ -62,9 +62,41 @@ public sealed class SaleItemInputViewModelTests
         Assert.False(input.CanSubmit);
 
         input.LoadMeasurementUnits([new MeasurementUnitDto(1, "Piece", "pc", null)]);
+        input.ProductCode = "10526";
 
         Assert.True(input.CanSubmit);
         Assert.Equal(1, input.SelectedMeasurementUnit?.Id);
+    }
+
+    [Fact]
+    public void CreationDefaults_SelectSemanticUnitByReturnedIdAndPreserveManualCodeOverride()
+    {
+        var input = new SaleItemInputViewModel();
+        input.LoadMeasurementUnits(
+        [
+            new MeasurementUnitDto(1, "Kilogram", "kg", null),
+            new MeasurementUnitDto(24, "ცალი", "ც", null)
+        ]);
+        input.ProductCode = "20000";
+
+        input.ApplyCreationDefaults(new ProductCreationDefaultsDto(
+            "10526", 24, "ცალი", "ც", null));
+
+        Assert.Equal("20000", input.ProductCode);
+        Assert.Equal(24, input.SelectedMeasurementUnit?.Id);
+    }
+
+    [Fact]
+    public void GenerateBarcode_RecalculatesFromCurrentEditedCode()
+    {
+        var input = new SaleItemInputViewModel { ProductCode = "10525" };
+
+        input.GenerateBarcodeCommand.Execute(null);
+        Assert.Equal("0000000105255", input.Barcode);
+
+        input.ProductCode = "21000";
+        input.GenerateBarcodeCommand.Execute(null);
+        Assert.Equal("0000000210003", input.Barcode);
     }
 
     [Fact]

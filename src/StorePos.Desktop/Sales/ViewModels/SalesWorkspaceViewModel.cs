@@ -24,6 +24,7 @@ public sealed class SalesWorkspaceViewModel : ObservableObject, IDisposable
     private readonly RelayCommand _editSelectedItemCommand;
     private readonly RelayCommand _completeSaleCommand;
     private CancellationTokenSource? _detailsCancellation;
+    private CancellationTokenSource? _catalogDefaultsCancellation;
     private SaleTabViewModel? _selectedSale;
     private SaleItemViewModel? _selectedItem;
     private string? _errorMessage;
@@ -187,6 +188,8 @@ public sealed class SalesWorkspaceViewModel : ObservableObject, IDisposable
         ProductSearch.ManualFallbackRequested -= OnManualFallbackRequested;
         ProductSearch.ErrorOccurred -= OnProductSearchError;
         ProductSearch.Dispose();
+        _catalogDefaultsCancellation?.Cancel();
+        _catalogDefaultsCancellation?.Dispose();
         _detailsCancellation?.Cancel();
         _detailsCancellation?.Dispose();
         _lifetimeCancellation.Cancel();
@@ -255,6 +258,7 @@ public sealed class SalesWorkspaceViewModel : ObservableObject, IDisposable
                 var result = await _apiClient.CreateProductAndAddSaleItemAsync(
                     sale.Id,
                     new CreateProductAndAddSaleItemRequest(
+                        ManualItemInput.ProductCode.Trim(),
                         productName,
                         ManualItemInput.Barcode,
                         unit.Id,
@@ -301,7 +305,9 @@ public sealed class SalesWorkspaceViewModel : ObservableObject, IDisposable
         catch (ProductConflictException exception)
         {
             Trace.TraceWarning(exception.ToString());
-            ErrorMessage = "ეს შტრიხკოდი უკვე სხვა პროდუქტზეა გამოყენებული.";
+            ErrorMessage = exception.Kind == ProductConflictKind.Code
+                ? "ეს პროდუქტის კოდი უკვე გამოყენებულია. შეცვალეთ კოდი და თავიდან სცადეთ."
+                : "ეს შტრიხკოდი უკვე სხვა პროდუქტზეა გამოყენებული.";
         }
         catch (Exception exception)
         {
@@ -541,10 +547,62 @@ public sealed class SalesWorkspaceViewModel : ObservableObject, IDisposable
         object? sender,
         PropertyChangedEventArgs e)
     {
+        if (e.PropertyName == nameof(SaleItemInputViewModel.SaveToCatalog))
+        {
+            if (ManualItemInput.SaveToCatalog)
+            {
+                _ = LoadProductCreationDefaultsAsync();
+            }
+            else
+            {
+                _catalogDefaultsCancellation?.Cancel();
+            }
+        }
+
         if (e.PropertyName is nameof(SaleItemInputViewModel.IsComplete) or
             nameof(SaleItemInputViewModel.CanSubmit))
         {
             _addManualItemCommand.NotifyCanExecuteChanged();
+        }
+    }
+
+    private async Task LoadProductCreationDefaultsAsync()
+    {
+        _catalogDefaultsCancellation?.Cancel();
+        _catalogDefaultsCancellation?.Dispose();
+        var cancellation = CancellationTokenSource.CreateLinkedTokenSource(
+            _lifetimeCancellation.Token);
+        _catalogDefaultsCancellation = cancellation;
+        ManualItemInput.SetCatalogDefaultsLoading(true);
+
+        try
+        {
+            var defaults = await _apiClient.GetProductCreationDefaultsAsync(
+                cancellation.Token);
+            if (ManualItemInput.SaveToCatalog && !cancellation.IsCancellationRequested)
+            {
+                ManualItemInput.ApplyCreationDefaults(defaults);
+            }
+        }
+        catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+        {
+        }
+        catch (Exception exception)
+        {
+            Trace.TraceError(exception.ToString());
+            if (ManualItemInput.SaveToCatalog)
+            {
+                ManualItemInput.SetCatalogError(
+                    "პროდუქტის კოდისა და ნაგულისხმევი ერთეულის მიღება ვერ მოხერხდა.");
+            }
+        }
+        finally
+        {
+            if (ReferenceEquals(_catalogDefaultsCancellation, cancellation))
+            {
+                _catalogDefaultsCancellation = null;
+                cancellation.Dispose();
+            }
         }
     }
 
@@ -623,7 +681,7 @@ public sealed class SalesWorkspaceViewModel : ObservableObject, IDisposable
                 result.Quantity,
                 result.UnitPrice,
                 result.LineTotal,
-                isManual: false,
+                result.IsManual,
                 result.Comment),
             result.WasNewItem,
             result.SaleTotalAmount);

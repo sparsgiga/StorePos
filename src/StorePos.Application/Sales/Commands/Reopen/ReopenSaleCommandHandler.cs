@@ -1,4 +1,5 @@
 using MediatR;
+using StorePos.Application.Common.Exceptions;
 using StorePos.Domain.Aggregates.Sale;
 using StorePos.Domain.Interfaces;
 
@@ -15,7 +16,7 @@ public sealed class ReopenSaleCommandHandler(
     {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(request.SaleId);
 
-        var sale = await saleRepository.GetCompletedForReopenAsync(
+        var sale = await saleRepository.GetCompletedForUpdateAsync(
             request.SaleId,
             cancellationToken);
 
@@ -24,7 +25,14 @@ public sealed class ReopenSaleCommandHandler(
             return null;
         }
 
-        sale.Reopen();
+        try
+        {
+            sale.Reopen();
+        }
+        catch (InvalidOperationException exception)
+        {
+            throw new SaleOperationConflictException(exception.Message, exception);
+        }
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
         return new ReopenSaleResult(

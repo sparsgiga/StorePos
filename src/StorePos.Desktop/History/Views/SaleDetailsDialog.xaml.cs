@@ -1,13 +1,13 @@
 using System.Windows;
-using StorePos.Desktop.History.Models;
+using StorePos.Desktop.History.ViewModels;
 
 namespace StorePos.Desktop.History.Views;
 
 public partial class SaleDetailsDialog : Window
 {
-    public SaleDetailsDialog(SaleDetailsDto sale)
+    public SaleDetailsDialog(SaleDetailsDialogViewModel viewModel)
     {
         InitializeComponent();
-        DataContext = sale;
+        DataContext = viewModel;
     }
 }

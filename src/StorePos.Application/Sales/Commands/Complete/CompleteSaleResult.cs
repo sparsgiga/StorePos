@@ -7,4 +7,7 @@ public sealed record CompleteSaleResult(
     string SaleNumber,
     SaleStatus Status,
     decimal TotalAmount,
+    decimal PaidAmount,
+    decimal OutstandingAmount,
+    bool HasDebt,
     DateTime DateCompleted);

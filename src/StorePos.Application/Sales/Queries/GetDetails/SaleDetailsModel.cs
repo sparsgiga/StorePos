@@ -6,10 +6,14 @@ public sealed record SaleDetailsModel(
     long Id,
     string SaleNumber,
     SaleStatus Status,
+    long? CustomerId,
     string? CustomerName,
     string? CustomerIdentificationNumber,
     string? Comment,
     decimal TotalAmount,
+    decimal PaidAmount,
+    decimal OutstandingAmount,
+    bool HasDebt,
     DateTime DateCreated,
     DateTime? DateCompleted,
     DateTime? DateCancelled,
@@ -32,4 +36,6 @@ public sealed record SaleDetailsItemModel(
 
 public sealed record SaleDetailsPaymentModel(
     PaymentType PaymentType,
-    decimal Amount);
+    SalePaymentKind PaymentKind,
+    decimal Amount,
+    DateTime DateCreated);

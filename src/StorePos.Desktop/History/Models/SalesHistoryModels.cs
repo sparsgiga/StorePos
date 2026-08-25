@@ -23,7 +23,10 @@ public sealed record SalesHistoryItemDto(
     decimal CashAmount,
     decimal CardAmount,
     decimal BankTransferAmount,
-    decimal OtherAmount)
+    decimal OtherAmount,
+    decimal PaidAmount,
+    decimal OutstandingAmount,
+    bool HasDebt)
 {
     public string StatusName => Status switch
     {

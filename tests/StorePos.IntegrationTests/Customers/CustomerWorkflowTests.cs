@@ -178,7 +178,7 @@ public sealed class CustomerWorkflowTests
                 CancellationToken.None);
         context.ChangeTracker.Clear();
 
-        var readService = new SalesReadService(context, TimeProvider.System);
+        var readService = new SalesReadService(context);
         var details = await new GetSaleDetailsQueryHandler(readService)
             .Handle(new GetSaleDetailsQuery(sale.Id), CancellationToken.None);
         var history = await new GetSalesHistoryQueryHandler(readService)
@@ -207,7 +207,7 @@ public sealed class CustomerWorkflowTests
         context.ChangeTracker.Clear();
 
         var details = await new GetSaleDetailsQueryHandler(
-                new SalesReadService(context, TimeProvider.System))
+                new SalesReadService(context))
             .Handle(new GetSaleDetailsQuery(sale.Id), CancellationToken.None);
 
         Assert.NotNull(details);

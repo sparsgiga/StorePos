@@ -12,9 +12,6 @@ namespace StorePos.IntegrationTests.Sales;
 
 public sealed class SoldProductsReadWorkflowTests
 {
-    private static readonly TimeProvider TestTimeProvider =
-        new FixedTimeProvider(new DateTimeOffset(2026, 8, 25, 12, 0, 0, TimeSpan.Zero));
-
     [Fact]
     public async Task SoldProducts_ReturnsOnlyCompletedItemsAndPaginatesNewestFirst()
     {
@@ -79,7 +76,7 @@ public sealed class SoldProductsReadWorkflowTests
     }
 
     private static GetSoldProductsQueryHandler CreateHandler(StorePosDbContext context)
-        => new(new SalesReadService(context, TestTimeProvider));
+        => new(new SalesReadService(context));
 
     private static async Task<SeededItems> SeedAsync(StorePosDbContext context)
     {
@@ -132,10 +129,4 @@ public sealed class SoldProductsReadWorkflowTests
     }
 
     private sealed record SeededItems(long OldCompletedItemId, long NewestCompletedItemId);
-
-    private sealed class FixedTimeProvider(DateTimeOffset now) : TimeProvider
-    {
-        public override TimeZoneInfo LocalTimeZone => TimeZoneInfo.Utc;
-        public override DateTimeOffset GetUtcNow() => now;
-    }
 }

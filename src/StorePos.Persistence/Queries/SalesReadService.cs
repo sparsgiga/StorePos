@@ -4,14 +4,13 @@ using StorePos.Application.Common.Models;
 using StorePos.Application.Sales.Queries.GetDetails;
 using StorePos.Application.Sales.Queries.GetHistory;
 using StorePos.Application.Sales.Queries.GetSoldProducts;
+using StorePos.Domain.Aggregates.Sale;
 using StorePos.Domain.Enums;
 using StorePos.Persistence.Context;
 
 namespace StorePos.Persistence.Queries;
 
-public sealed class SalesReadService(
-    StorePosDbContext context,
-    TimeProvider timeProvider) : ISalesReadService
+public sealed class SalesReadService(StorePosDbContext context) : ISalesReadService
 {
     public async Task<PagedResult<SalesHistoryItemModel>> GetHistoryAsync(
         GetSalesHistoryQuery request,
@@ -20,7 +19,7 @@ public sealed class SalesReadService(
         var query = context.Sales.AsNoTracking();
         var saleNumber = NormalizeSearch(request.SaleNumber);
         var customerName = NormalizeSearch(request.CustomerName);
-        var (dateFromUtc, dateToExclusiveUtc) = GetUtcRange(
+        var (dateFrom, dateToExclusive) = GetLocalRange(
             request.DateFrom,
             request.DateTo);
 
@@ -40,24 +39,24 @@ public sealed class SalesReadService(
                 sale.CustomerName != null && sale.CustomerName.Contains(customerName));
         }
 
-        if (dateFromUtc.HasValue)
+        if (dateFrom.HasValue)
         {
             query = query.Where(sale =>
                 (sale.Status == SaleStatus.Completed
                     ? sale.DateCompleted ?? sale.DateCreated
                     : sale.Status == SaleStatus.Cancelled
                         ? sale.DateCancelled ?? sale.DateCreated
-                        : sale.DateCreated) >= dateFromUtc.Value);
+                        : sale.DateCreated) >= dateFrom.Value);
         }
 
-        if (dateToExclusiveUtc.HasValue)
+        if (dateToExclusive.HasValue)
         {
             query = query.Where(sale =>
                 (sale.Status == SaleStatus.Completed
                     ? sale.DateCompleted ?? sale.DateCreated
                     : sale.Status == SaleStatus.Cancelled
                         ? sale.DateCancelled ?? sale.DateCreated
-                        : sale.DateCreated) < dateToExclusiveUtc.Value);
+                        : sale.DateCreated) < dateToExclusive.Value);
         }
 
         var totalCount = await query.CountAsync(cancellationToken);
@@ -97,7 +96,13 @@ public sealed class SalesReadService(
                     .Sum(payment => (decimal?)payment.Amount) ?? 0m,
                 sale.Payments
                     .Where(payment => payment.PaymentType == PaymentType.Other)
-                    .Sum(payment => (decimal?)payment.Amount) ?? 0m))
+                    .Sum(payment => (decimal?)payment.Amount) ?? 0m,
+                sale.Payments.Sum(payment => (decimal?)payment.Amount) ?? 0m,
+                sale.TotalAmount -
+                    (sale.Payments.Sum(payment => (decimal?)payment.Amount) ?? 0m),
+                sale.Status == SaleStatus.Completed &&
+                    sale.TotalAmount -
+                    (sale.Payments.Sum(payment => (decimal?)payment.Amount) ?? 0m) > 0m))
             .ToArrayAsync(cancellationToken);
 
         return new PagedResult<SalesHistoryItemModel>(
@@ -114,7 +119,7 @@ public sealed class SalesReadService(
         var productSearch = NormalizeSearch(request.ProductSearch);
         var saleNumber = NormalizeSearch(request.SaleNumber);
         var customerName = NormalizeSearch(request.CustomerName);
-        var (dateFromUtc, dateToExclusiveUtc) = GetUtcRange(
+        var (dateFrom, dateToExclusive) = GetLocalRange(
             request.DateFrom,
             request.DateTo);
 
@@ -125,14 +130,14 @@ public sealed class SalesReadService(
             where sale.Status == SaleStatus.Completed && sale.DateCompleted.HasValue
             select new { Sale = sale, Item = item };
 
-        if (dateFromUtc.HasValue)
+        if (dateFrom.HasValue)
         {
-            query = query.Where(row => row.Sale.DateCompleted >= dateFromUtc.Value);
+            query = query.Where(row => row.Sale.DateCompleted >= dateFrom.Value);
         }
 
-        if (dateToExclusiveUtc.HasValue)
+        if (dateToExclusive.HasValue)
         {
-            query = query.Where(row => row.Sale.DateCompleted < dateToExclusiveUtc.Value);
+            query = query.Where(row => row.Sale.DateCompleted < dateToExclusive.Value);
         }
 
         if (productSearch is not null)
@@ -204,6 +209,7 @@ public sealed class SalesReadService(
                 currentSale.Id,
                 currentSale.SaleNumber,
                 currentSale.Status,
+                currentSale.CustomerId,
                 currentSale.CustomerName,
                 currentSale.CustomerIdentificationNumber,
                 currentSale.Comment,
@@ -241,20 +247,32 @@ public sealed class SalesReadService(
         var payments = await context.SalePayments
             .AsNoTracking()
             .Where(payment => payment.SaleId == saleId)
-            .OrderBy(payment => payment.Id)
+            .OrderBy(payment => payment.DateCreated)
+            .ThenBy(payment => payment.Id)
             .Select(payment => new SaleDetailsPaymentModel(
                 payment.PaymentType,
-                payment.Amount))
+                payment.PaymentKind,
+                payment.Amount,
+                payment.DateCreated))
             .ToArrayAsync(cancellationToken);
+
+        var paidAmount = SalePayment.RoundAmount(
+            payments.Sum(payment => payment.Amount));
+        var outstandingAmount = SalePayment.RoundAmount(
+            sale.TotalAmount - paidAmount);
 
         return new SaleDetailsModel(
             sale.Id,
             sale.SaleNumber,
             sale.Status,
+            sale.CustomerId,
             sale.CustomerName,
             sale.CustomerIdentificationNumber,
             sale.Comment,
             sale.TotalAmount,
+            paidAmount,
+            outstandingAmount,
+            sale.Status == SaleStatus.Completed && outstandingAmount > 0,
             sale.DateCreated,
             sale.DateCompleted,
             sale.DateCancelled,
@@ -262,20 +280,12 @@ public sealed class SalesReadService(
             payments);
     }
 
-    private (DateTime? DateFromUtc, DateTime? DateToExclusiveUtc) GetUtcRange(
+    private static (DateTime? DateFrom, DateTime? DateToExclusive) GetLocalRange(
         DateOnly? dateFrom,
         DateOnly? dateTo)
         => (
-            dateFrom.HasValue ? ToUtc(dateFrom.Value) : null,
-            dateTo.HasValue ? ToUtc(dateTo.Value.AddDays(1)) : null);
-
-    private DateTime ToUtc(DateOnly date)
-    {
-        var localDateTime = DateTime.SpecifyKind(
-            date.ToDateTime(TimeOnly.MinValue),
-            DateTimeKind.Unspecified);
-        return TimeZoneInfo.ConvertTimeToUtc(localDateTime, timeProvider.LocalTimeZone);
-    }
+            dateFrom?.ToDateTime(TimeOnly.MinValue),
+            dateTo?.AddDays(1).ToDateTime(TimeOnly.MinValue));
 
     private static string? NormalizeSearch(string? value)
         => string.IsNullOrWhiteSpace(value) ? null : value.Trim();

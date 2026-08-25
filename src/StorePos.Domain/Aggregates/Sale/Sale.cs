@@ -63,6 +63,14 @@ public sealed class Sale : AuditableEntity<long>, IAggregateRoot
 
     public IReadOnlyCollection<SalePayment> Payments => _payments;
 
+    public decimal PaidAmount => SalePayment.RoundAmount(
+        _payments.Sum(payment => payment.Amount));
+
+    public decimal OutstandingAmount => SalePayment.RoundAmount(
+        TotalAmount - PaidAmount);
+
+    public bool HasDebt => Status == SaleStatus.Completed && OutstandingAmount > 0;
+
     public static Sale Create(
         string saleNumber,
         long? cashierId = null,
@@ -206,7 +214,8 @@ public sealed class Sale : AuditableEntity<long>, IAggregateRoot
 
     public void Complete(
         IEnumerable<SalePaymentAllocation> payments,
-        DateTime dateCompleted)
+        DateTime dateCompleted,
+        bool allowDebt = false)
     {
         EnsureDraft();
 
@@ -224,33 +233,91 @@ public sealed class Sale : AuditableEntity<long>, IAggregateRoot
                 "A draft sale cannot contain existing payments.");
         }
 
-        var newPayments = payments
+        var allocations = payments.ToArray();
+        foreach (var payment in allocations)
+        {
+            if (!Enum.IsDefined(payment.PaymentType))
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(payments),
+                    "Payment type is not supported.");
+            }
+
+            if (payment.Amount < 0)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(payments),
+                    "Payment amount cannot be negative.");
+            }
+        }
+
+        var newPayments = allocations
+            .Where(payment => SalePayment.RoundAmount(payment.Amount) > 0)
             .Select(payment => SalePayment.Create(
                 Id,
                 payment.PaymentType,
+                SalePaymentKind.Completion,
                 payment.Amount))
             .ToArray();
-
-        if (newPayments.Length == 0)
-        {
-            throw new InvalidOperationException(
-                "At least one payment is required to complete a sale.");
-        }
 
         var paymentTotal = SalePayment.RoundAmount(
             newPayments.Sum(payment => payment.Amount));
         var saleTotal = SalePayment.RoundAmount(TotalAmount);
 
-        if (paymentTotal != saleTotal)
+        if (paymentTotal > saleTotal)
+        {
+            throw new InvalidOperationException(
+                "The payment total cannot exceed the sale total.");
+        }
+
+        var outstandingAmount = SalePayment.RoundAmount(saleTotal - paymentTotal);
+
+        if (!allowDebt && outstandingAmount != 0)
         {
             throw new InvalidOperationException(
                 "The payment total must equal the sale total.");
+        }
+
+        if (outstandingAmount > 0 && CustomerId is null)
+        {
+            throw new InvalidOperationException(
+                "A customer must be assigned when completing a sale with debt.");
         }
 
         _payments.AddRange(newPayments);
         Status = SaleStatus.Completed;
         DateCompleted = dateCompleted;
         DateCancelled = null;
+    }
+
+    public SalePayment AddDebtPayment(PaymentType paymentType, decimal amount)
+    {
+        if (Status != SaleStatus.Completed)
+        {
+            throw new InvalidOperationException(
+                "Debt payments can only be added to completed sales.");
+        }
+
+        var outstandingAmount = OutstandingAmount;
+        if (outstandingAmount <= 0)
+        {
+            throw new InvalidOperationException("The sale has no outstanding debt.");
+        }
+
+        var payment = SalePayment.Create(
+            Id,
+            paymentType,
+            SalePaymentKind.DebtRepayment,
+            amount);
+
+        if (payment.Amount > outstandingAmount)
+        {
+            throw new InvalidOperationException(
+                "The debt payment cannot exceed the outstanding amount.");
+        }
+
+        _payments.Add(payment);
+        return payment;
     }
 
     public void Cancel(DateTime dateCancelled)
@@ -274,6 +341,12 @@ public sealed class Sale : AuditableEntity<long>, IAggregateRoot
         {
             throw new InvalidOperationException(
                 "Only a completed sale can be reopened.");
+        }
+
+        if (_payments.Any(payment => payment.PaymentKind == SalePaymentKind.DebtRepayment))
+        {
+            throw new InvalidOperationException(
+                "This sale has a later debt repayment and can no longer be reopened.");
         }
 
         _payments.Clear();

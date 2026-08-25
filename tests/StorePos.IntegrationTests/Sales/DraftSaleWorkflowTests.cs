@@ -85,6 +85,26 @@ public sealed class DraftSaleWorkflowTests
         Assert.Equal(created.SaleNumber, persistedDraft.SaleNumber);
     }
 
+    [Fact]
+    public async Task SaleNumber_UsesLocalBusinessDateInsteadOfUtcDate()
+    {
+        await using var context = CreateContext();
+        var localTimeZone = TimeZoneInfo.CreateCustomTimeZone(
+            "Test +04",
+            TimeSpan.FromHours(4),
+            "Test +04",
+            "Test +04");
+        var generator = new SaleNumberGenerator(
+            context,
+            new FixedTimeProvider(
+                new DateTimeOffset(2026, 8, 24, 22, 30, 0, TimeSpan.Zero),
+                localTimeZone));
+
+        var saleNumber = await generator.GenerateAsync();
+
+        Assert.Equal("20260825-0001", saleNumber);
+    }
+
     private static StorePosDbContext CreateContext()
     {
         var options = new DbContextOptionsBuilder<StorePosDbContext>()
@@ -94,9 +114,11 @@ public sealed class DraftSaleWorkflowTests
         return new StorePosDbContext(options);
     }
 
-    private sealed class FixedTimeProvider(DateTimeOffset utcNow) : TimeProvider
+    private sealed class FixedTimeProvider(
+        DateTimeOffset utcNow,
+        TimeZoneInfo? localTimeZone = null) : TimeProvider
     {
-        public override TimeZoneInfo LocalTimeZone => TimeZoneInfo.Utc;
+        public override TimeZoneInfo LocalTimeZone => localTimeZone ?? TimeZoneInfo.Utc;
 
         public override DateTimeOffset GetUtcNow() => utcNow;
     }

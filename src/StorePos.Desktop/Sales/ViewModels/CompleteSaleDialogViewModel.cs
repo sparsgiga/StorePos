@@ -18,6 +18,7 @@ public sealed class CompleteSaleDialogViewModel : ObservableObject
 
     private readonly IStorePosApiClient _apiClient;
     private readonly long _saleId;
+    private readonly bool _hasCustomer;
     private readonly CancellationToken _cancellationToken;
     private readonly AsyncRelayCommand _completeCommand;
     private string? _cashAmount;
@@ -27,16 +28,19 @@ public sealed class CompleteSaleDialogViewModel : ObservableObject
     private decimal _paidAmount;
     private decimal _remainingAmount;
     private bool _canComplete;
+    private bool _allowDebt;
     private string? _errorMessage;
 
     public CompleteSaleDialogViewModel(
         IStorePosApiClient apiClient,
         long saleId,
         decimal totalAmount,
+        long? customerId,
         CancellationToken cancellationToken)
     {
         _apiClient = apiClient;
         _saleId = saleId;
+        _hasCustomer = customerId.HasValue;
         _cancellationToken = cancellationToken;
         TotalAmount = totalAmount;
         _completeCommand = new AsyncRelayCommand(CompleteAsync, () => CanComplete);
@@ -97,6 +101,21 @@ public sealed class CompleteSaleDialogViewModel : ObservableObject
         }
     }
 
+    public bool AllowDebt
+    {
+        get => _allowDebt;
+        set
+        {
+            if (SetProperty(ref _allowDebt, value))
+            {
+                Recalculate();
+                OnPropertyChanged(nameof(RemainingLabel));
+            }
+        }
+    }
+
+    public string RemainingLabel => AllowDebt ? "ვალი" : "დარჩენილი";
+
     public string? ErrorMessage
     {
         get => _errorMessage;
@@ -122,13 +141,18 @@ public sealed class CompleteSaleDialogViewModel : ObservableObject
             ErrorMessage = null;
             Result = await _apiClient.CompleteSaleAsync(
                 _saleId,
-                new CompleteSaleRequest(payments),
+                new CompleteSaleRequest(payments, AllowDebt),
                 _cancellationToken);
 
             CloseRequested?.Invoke(this, new DialogCloseRequestedEventArgs(true));
         }
         catch (OperationCanceledException) when (_cancellationToken.IsCancellationRequested)
         {
+        }
+        catch (SaleOperationException exception)
+        {
+            Trace.TraceWarning(exception.ToString());
+            ErrorMessage = exception.Message;
         }
         catch (Exception exception)
         {
@@ -175,10 +199,24 @@ public sealed class CompleteSaleDialogViewModel : ObservableObject
             }
         }
 
-        var calculation = PaymentCalculator.Calculate(TotalAmount, amounts);
+        var calculation = PaymentCalculator.Calculate(
+            TotalAmount,
+            amounts,
+            AllowDebt,
+            _hasCustomer);
         PaidAmount = calculation.PaidAmount;
         RemainingAmount = calculation.RemainingAmount;
         CanComplete = hasEnteredPayment && inputsAreValid && calculation.CanComplete;
+        if (AllowDebt)
+        {
+            CanComplete = inputsAreValid && calculation.CanComplete;
+        }
+
+        ErrorMessage = inputsAreValid && AllowDebt && RemainingAmount > 0 && !_hasCustomer
+            ? "ვალზე გაყიდვისთვის მიუთითეთ მყიდველი."
+            : inputsAreValid && RemainingAmount < 0
+                ? "გადახდილი თანხა გაყიდვის ჯამს არ უნდა აღემატებოდეს."
+                : null;
     }
 
     private bool TryGetPayments(out IReadOnlyList<CompleteSalePaymentRequest> payments)
@@ -198,11 +236,15 @@ public sealed class CompleteSaleDialogViewModel : ObservableObject
                 return false;
             }
 
-            result.Add(new CompleteSalePaymentRequest(input.PaymentType, amount));
+            var roundedAmount = decimal.Round(amount, 5, MidpointRounding.AwayFromZero);
+            if (roundedAmount > 0)
+            {
+                result.Add(new CompleteSalePaymentRequest(input.PaymentType, roundedAmount));
+            }
         }
 
         payments = result;
-        return result.Count > 0;
+        return result.Count > 0 || AllowDebt;
     }
 
     private (int PaymentType, string? Value)[] GetInputs()

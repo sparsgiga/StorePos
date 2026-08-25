@@ -21,7 +21,7 @@ public interface ISaleRepository :
         long saleId,
         CancellationToken cancellationToken = default);
 
-    Task<Sale?> GetCompletedForReopenAsync(
+    Task<Sale?> GetCompletedForUpdateAsync(
         long saleId,
         CancellationToken cancellationToken = default);
 }

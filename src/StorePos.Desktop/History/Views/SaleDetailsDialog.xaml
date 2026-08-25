@@ -18,14 +18,55 @@
 
         <DockPanel Grid.Row="0" Margin="0,0,0,12">
             <StackPanel DockPanel.Dock="Left">
-                <TextBlock FontSize="22" FontWeight="SemiBold" Text="{Binding SaleNumber}" />
+                <StackPanel Orientation="Horizontal">
+                    <TextBox VerticalAlignment="Center"
+                             Padding="0"
+                             Background="Transparent"
+                             BorderThickness="0"
+                             FontSize="22"
+                             FontWeight="SemiBold"
+                             IsReadOnly="True"
+                             IsReadOnlyCaretVisible="True"
+                             Text="{Binding SaleNumber}" />
+                    <Button Margin="8,0,0,0" Padding="7,2"
+                            Command="{Binding CopySaleNumberCommand}"
+                            Content="კოპირება"
+                            ToolTip="გაყიდვის ნომრის კოპირება" />
+                </StackPanel>
                 <TextBlock Margin="0,3,0,0" Foreground="#5F6B7A" Text="{Binding StatusName}" />
             </StackPanel>
-            <StackPanel DockPanel.Dock="Right" HorizontalAlignment="Right">
-                <TextBlock HorizontalAlignment="Right" Text="ჯამი" />
-                <TextBlock FontSize="23" FontWeight="Bold"
+            <Grid DockPanel.Dock="Right" HorizontalAlignment="Right">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="100" />
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <TextBlock Grid.Row="0" Margin="0,0,10,2" Text="ჯამი" />
+                <TextBlock Grid.Row="0" Grid.Column="1" HorizontalAlignment="Right" FontWeight="Bold"
                            Text="{Binding TotalAmount, StringFormat={}{0:N2} ₾}" />
-            </StackPanel>
+                <TextBlock Grid.Row="1" Margin="0,0,10,2" Text="გადახდილი" />
+                <TextBlock Grid.Row="1" Grid.Column="1" HorizontalAlignment="Right" FontWeight="SemiBold"
+                           Text="{Binding PaidAmount, StringFormat={}{0:N2} ₾}" />
+                <TextBlock Grid.Row="2" Margin="0,0,10,0" Text="ვალი" />
+                <TextBlock Grid.Row="2" Grid.Column="1" HorizontalAlignment="Right"
+                           Text="{Binding OutstandingAmount, StringFormat={}{0:N2} ₾}">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="FontWeight" Value="SemiBold" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding HasDebt}" Value="True">
+                                    <Setter Property="Foreground" Value="#B42318" />
+                                    <Setter Property="FontWeight" Value="Bold" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+            </Grid>
         </DockPanel>
 
         <Border Grid.Row="1" Margin="0,0,0,12" Padding="10"
@@ -83,14 +124,31 @@
                           IsReadOnly="True"
                           RowHeight="30">
                     <DataGrid.Columns>
+                        <DataGridTextColumn Width="150" Header="თარიღი"
+                                            Binding="{Binding DateCreated, StringFormat={}{0:dd.MM.yyyy HH:mm}}" />
                         <DataGridTextColumn Width="*" Header="გადახდის ტიპი" Binding="{Binding PaymentTypeName}" />
-                        <DataGridTextColumn Width="180" Header="თანხა" Binding="{Binding Amount, StringFormat={}{0:N5}}" />
+                        <DataGridTextColumn Width="150" Header="დანიშნულება" Binding="{Binding PaymentKindName}" />
+                        <DataGridTextColumn Width="130" Header="თანხა" Binding="{Binding Amount, StringFormat={}{0:N5}}" />
                     </DataGrid.Columns>
                 </DataGrid>
             </TabItem>
         </TabControl>
 
-        <Button Grid.Row="3" MinWidth="100" Margin="0,12,0,0" Padding="12,6"
-                HorizontalAlignment="Right" IsCancel="True" Content="დახურვა" />
+        <StackPanel Grid.Row="3" Margin="0,12,0,0" HorizontalAlignment="Right" Orientation="Horizontal">
+            <Button MinWidth="125" Margin="0,0,8,0" Padding="12,6"
+                    Command="{Binding PayDebtCommand}" Content="ვალის გადახდა">
+                <Button.Style>
+                    <Style TargetType="Button">
+                        <Setter Property="Visibility" Value="Collapsed" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding HasDebt}" Value="True">
+                                <Setter Property="Visibility" Value="Visible" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Button.Style>
+            </Button>
+            <Button MinWidth="100" Padding="12,6" IsCancel="True" Content="დახურვა" />
+        </StackPanel>
     </Grid>
 </Window>

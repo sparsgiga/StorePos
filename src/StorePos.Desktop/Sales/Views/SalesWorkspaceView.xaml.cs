@@ -89,6 +89,18 @@ public partial class SalesWorkspaceView : UserControl
         e.Handled = true;
     }
 
+    private void OnProductSearchResultDoubleClick(object sender, MouseButtonEventArgs e)
+    {
+        if (DataContext is not SalesWorkspaceViewModel viewModel ||
+            viewModel.ProductSearch.AddSelectedCommand.CanExecute(null) != true)
+        {
+            return;
+        }
+
+        viewModel.ProductSearch.AddSelectedCommand.Execute(null);
+        e.Handled = true;
+    }
+
     private static T? FindByTag<T>(DependencyObject parent, object tag)
         where T : FrameworkElement
     {

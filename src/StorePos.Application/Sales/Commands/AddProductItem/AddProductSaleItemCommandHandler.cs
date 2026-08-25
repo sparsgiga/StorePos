@@ -72,6 +72,7 @@ public sealed class AddProductSaleItemCommandHandler(
             item.Quantity,
             item.UnitPrice,
             item.LineTotal,
+            item.IsManual,
             sale.TotalAmount,
             addition.WasNewItem,
             item.Comment);

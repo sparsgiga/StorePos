@@ -72,14 +72,33 @@
                   SelectionMode="Single"
                   VirtualizingPanel.IsVirtualizing="True"
                   VirtualizingPanel.VirtualizationMode="Recycling">
+            <DataGrid.RowStyle>
+                <Style TargetType="DataGridRow">
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding HasDebt}" Value="True">
+                            <Setter Property="Background" Value="#FFF0F0" />
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </DataGrid.RowStyle>
             <DataGrid.Columns>
                 <DataGridTextColumn Width="135" Header="თარიღი" Binding="{Binding RelevantDate, StringFormat={}{0:dd.MM.yyyy HH:mm}}" />
                 <DataGridTextColumn Width="135" Header="გაყიდვა" Binding="{Binding SaleNumber}" />
                 <DataGridTextColumn Width="*" MinWidth="150" Header="მყიდველი" Binding="{Binding CustomerName}" />
-                <DataGridTextColumn Width="95" Header="ნაღდი" Binding="{Binding CashAmount, StringFormat={}{0:N2}}" />
-                <DataGridTextColumn Width="95" Header="ბარათი" Binding="{Binding CardAmount, StringFormat={}{0:N2}}" />
-                <DataGridTextColumn Width="105" Header="გადარიცხვა" Binding="{Binding BankTransferAmount, StringFormat={}{0:N2}}" />
-                <DataGridTextColumn Width="85" Header="სხვა" Binding="{Binding OtherAmount, StringFormat={}{0:N2}}" />
+                <DataGridTextColumn Width="105" Header="გადახდილი" Binding="{Binding PaidAmount, StringFormat={}{0:N2}}" />
+                <DataGridTextColumn Width="105" Header="ვალი" Binding="{Binding OutstandingAmount, StringFormat={}{0:N2}}">
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="VerticalAlignment" Value="Center" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding HasDebt}" Value="True">
+                                    <Setter Property="Foreground" Value="#B42318" />
+                                    <Setter Property="FontWeight" Value="Bold" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
                 <DataGridTextColumn Width="105" Header="ჯამი" Binding="{Binding TotalAmount, StringFormat={}{0:N2}}" />
                 <DataGridTextColumn Width="105" Header="სტატუსი" Binding="{Binding StatusName}" />
             </DataGrid.Columns>

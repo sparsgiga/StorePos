@@ -496,6 +496,9 @@ namespace StorePos.Persistence.Migrations
                     b.Property<DateTime?>("DateUpdated")
                         .HasColumnType("datetime2");
 
+                    b.Property<int>("PaymentKind")
+                        .HasColumnType("int");
+
                     b.Property<int>("PaymentType")
                         .HasColumnType("int");
 

@@ -1,4 +1,5 @@
 using MediatR;
+using StorePos.Application.Common.Exceptions;
 using StorePos.Domain.Aggregates.Sale;
 using StorePos.Domain.Interfaces;
 
@@ -14,33 +15,6 @@ public sealed class CompleteSaleCommandHandler(
         CompleteSaleCommand request,
         CancellationToken cancellationToken)
     {
-        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(request.SaleId);
-        ArgumentNullException.ThrowIfNull(request.Payments);
-
-        if (request.Payments.Count == 0)
-        {
-            throw new ArgumentException(
-                "At least one payment is required.",
-                nameof(request.Payments));
-        }
-
-        foreach (var payment in request.Payments)
-        {
-            if (!Enum.IsDefined(payment.PaymentType))
-            {
-                throw new ArgumentOutOfRangeException(
-                    nameof(request.Payments),
-                    "Payment type is not supported.");
-            }
-
-            if (payment.Amount < 0)
-            {
-                throw new ArgumentOutOfRangeException(
-                    nameof(request.Payments),
-                    "Payment amount cannot be negative.");
-            }
-        }
-
         var sale = await saleRepository.GetDraftForUpdateAsync(
             request.SaleId,
             cancellationToken);
@@ -50,11 +24,19 @@ public sealed class CompleteSaleCommandHandler(
             return null;
         }
 
-        sale.Complete(
-            request.Payments.Select(payment => new SalePaymentAllocation(
-                payment.PaymentType,
-                payment.Amount)),
-            timeProvider.GetUtcNow().UtcDateTime);
+        try
+        {
+            sale.Complete(
+                request.Payments.Select(payment => new SalePaymentAllocation(
+                    payment.PaymentType,
+                    payment.Amount)),
+                timeProvider.GetLocalNow().DateTime,
+                request.AllowDebt);
+        }
+        catch (InvalidOperationException exception)
+        {
+            throw new SaleOperationConflictException(exception.Message, exception);
+        }
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
@@ -63,6 +45,9 @@ public sealed class CompleteSaleCommandHandler(
             sale.SaleNumber,
             sale.Status,
             sale.TotalAmount,
+            sale.PaidAmount,
+            sale.OutstandingAmount,
+            sale.HasDebt,
             sale.DateCompleted!.Value);
     }
 }

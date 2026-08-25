@@ -4,10 +4,14 @@ public sealed record SaleDetailsDto(
     long Id,
     string SaleNumber,
     int Status,
+    long? CustomerId,
     string? CustomerName,
     string? CustomerIdentificationNumber,
     string? Comment,
     decimal TotalAmount,
+    decimal PaidAmount,
+    decimal OutstandingAmount,
+    bool HasDebt,
     DateTime DateCreated,
     DateTime? DateCompleted,
     DateTime? DateCancelled,
@@ -40,7 +44,11 @@ public sealed record SaleDetailsItemDto(
     public string SourceName => IsManual ? "ხელით" : "კატალოგი";
 }
 
-public sealed record SaleDetailsPaymentDto(int PaymentType, decimal Amount)
+public sealed record SaleDetailsPaymentDto(
+    int PaymentType,
+    int PaymentKind,
+    decimal Amount,
+    DateTime DateCreated)
 {
     public string PaymentTypeName => PaymentType switch
     {
@@ -48,6 +56,13 @@ public sealed record SaleDetailsPaymentDto(int PaymentType, decimal Amount)
         2 => "ბარათი",
         3 => "გადარიცხვა",
         4 => "სხვა",
+        _ => "უცნობი"
+    };
+
+    public string PaymentKindName => PaymentKind switch
+    {
+        1 => "დასრულებისას",
+        2 => "ვალის დაფარვა",
         _ => "უცნობი"
     };
 }

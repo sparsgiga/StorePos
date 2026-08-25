@@ -47,19 +47,19 @@ public sealed class StorePosDbContext(DbContextOptions<StorePosDbContext> option
 
     private void ApplyAuditValues()
     {
-        var utcNow = DateTime.UtcNow;
+        var localNow = DateTime.Now;
 
         foreach (var entry in ChangeTracker.Entries<IAudit>())
         {
             if (entry.State == EntityState.Added)
             {
-                entry.Entity.DateCreated = utcNow;
+                entry.Entity.DateCreated = localNow;
                 entry.Entity.DateUpdated = null;
             }
             else if (entry.State == EntityState.Modified)
             {
                 entry.Property(nameof(IAudit.DateCreated)).IsModified = false;
-                entry.Entity.DateUpdated = utcNow;
+                entry.Entity.DateUpdated = localNow;
             }
         }
     }

@@ -17,6 +17,10 @@ public sealed class SalePaymentConfiguration : IEntityTypeConfiguration<SalePaym
             .HasConversion<int>()
             .IsRequired();
 
+        builder.Property(x => x.PaymentKind)
+            .HasConversion<int>()
+            .IsRequired();
+
         builder.Property(x => x.Amount)
             .HasPrecision(18, 5)
             .IsRequired();

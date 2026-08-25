@@ -25,7 +25,7 @@ public sealed class CancelSaleCommandHandler(
             return null;
         }
 
-        sale.Cancel(timeProvider.GetUtcNow().UtcDateTime);
+        sale.Cancel(timeProvider.GetLocalNow().DateTime);
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
         return new CancelSaleResult(

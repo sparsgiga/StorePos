@@ -55,6 +55,7 @@ public sealed class SalesDialogService(IStorePosApiClient apiClient) : ISalesDia
             apiClient,
             sale.Id,
             sale.TotalAmount,
+            sale.CustomerId,
             cancellationToken);
         var dialog = new CompleteSaleDialog(viewModel)
         {
