@@ -2,7 +2,7 @@ namespace StorePos.Desktop.Sales.Calculations;
 
 public static class ManualItemCalculator
 {
-    public const int DecimalPlaces = 5;
+    public const int DecimalPlaces = FinancialInputPrecision.UnitPriceScale;
 
     public static bool TryCalculate(
         decimal? quantity,
@@ -31,36 +31,87 @@ public static class ManualItemCalculator
         {
             if (quantity.HasValue && unitPrice.HasValue)
             {
+                var normalizedQuantity = FinancialInputPrecision.RoundQuantity(quantity.Value);
+                var normalizedUnitPrice = FinancialInputPrecision.RoundUnitPrice(unitPrice.Value);
+                var canonicalLineTotal = FinancialInputPrecision.CalculateLineTotal(
+                    normalizedQuantity,
+                    normalizedUnitPrice);
+                if (!AreCanonicalValuesValid(
+                        normalizedQuantity,
+                        normalizedUnitPrice,
+                        canonicalLineTotal))
+                {
+                    return false;
+                }
+
                 calculation = new ManualItemCalculation(
                     ManualItemField.LineTotal,
-                    Round(quantity.Value * unitPrice.Value));
+                    canonicalLineTotal,
+                    normalizedQuantity,
+                    normalizedUnitPrice,
+                    canonicalLineTotal);
                 return true;
             }
 
             if (unitPrice.HasValue && lineTotal.HasValue)
             {
-                if (unitPrice.Value == 0)
+                var normalizedUnitPrice = FinancialInputPrecision.RoundUnitPrice(unitPrice.Value);
+                var desiredLineTotal = FinancialInputPrecision.RoundMoney(lineTotal.Value);
+                if (normalizedUnitPrice <= 0 || desiredLineTotal <= 0)
                 {
                     return false;
                 }
 
-                var calculatedQuantity = Round(lineTotal.Value / unitPrice.Value);
-                if (calculatedQuantity <= 0)
+                var calculatedQuantity = FinancialInputPrecision.RoundQuantity(
+                    desiredLineTotal / normalizedUnitPrice);
+                var canonicalLineTotal = FinancialInputPrecision.CalculateLineTotal(
+                    calculatedQuantity,
+                    normalizedUnitPrice);
+                if (!AreCanonicalValuesValid(
+                        calculatedQuantity,
+                        normalizedUnitPrice,
+                        canonicalLineTotal))
                 {
                     return false;
                 }
 
                 calculation = new ManualItemCalculation(
                     ManualItemField.Quantity,
-                    calculatedQuantity);
+                    calculatedQuantity,
+                    calculatedQuantity,
+                    normalizedUnitPrice,
+                    canonicalLineTotal);
                 return true;
             }
 
             if (quantity.HasValue && lineTotal.HasValue)
             {
+                var normalizedQuantity = FinancialInputPrecision.RoundQuantity(quantity.Value);
+                var desiredLineTotal = FinancialInputPrecision.RoundMoney(lineTotal.Value);
+                if (normalizedQuantity <= 0 || desiredLineTotal <= 0)
+                {
+                    return false;
+                }
+
+                var calculatedUnitPrice = FinancialInputPrecision.RoundUnitPrice(
+                    desiredLineTotal / normalizedQuantity);
+                var canonicalLineTotal = FinancialInputPrecision.CalculateLineTotal(
+                    normalizedQuantity,
+                    calculatedUnitPrice);
+                if (!AreCanonicalValuesValid(
+                        normalizedQuantity,
+                        calculatedUnitPrice,
+                        canonicalLineTotal))
+                {
+                    return false;
+                }
+
                 calculation = new ManualItemCalculation(
                     ManualItemField.UnitPrice,
-                    Round(lineTotal.Value / quantity.Value));
+                    calculatedUnitPrice,
+                    normalizedQuantity,
+                    calculatedUnitPrice,
+                    canonicalLineTotal);
                 return true;
             }
         }
@@ -73,5 +124,16 @@ public static class ManualItemCalculator
     }
 
     public static decimal Round(decimal value)
-        => decimal.Round(value, DecimalPlaces, MidpointRounding.AwayFromZero);
+        => FinancialInputPrecision.RoundUnitPrice(value);
+
+    private static bool AreCanonicalValuesValid(
+        decimal quantity,
+        decimal unitPrice,
+        decimal lineTotal)
+        => quantity > 0 &&
+           quantity <= FinancialInputPrecision.MaximumFiveScaleValue &&
+           unitPrice >= 0.00001m &&
+           unitPrice <= FinancialInputPrecision.MaximumFiveScaleValue &&
+           lineTotal >= 0.01m &&
+           lineTotal <= FinancialInputPrecision.MaximumMoneyValue;
 }

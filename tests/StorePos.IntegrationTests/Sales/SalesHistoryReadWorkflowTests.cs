@@ -63,10 +63,19 @@ public sealed class SalesHistoryReadWorkflowTests
         var cancelled = await handler.Handle(
             new GetSalesHistoryQuery(Status: SaleStatus.Cancelled),
             CancellationToken.None);
+        var drafts = await handler.Handle(
+            new GetSalesHistoryQuery(Status: SaleStatus.Draft),
+            CancellationToken.None);
 
         Assert.Equal("20260825-0002", Assert.Single(byNumber.Items).SaleNumber);
         Assert.All(byCustomer.Items, sale => Assert.Contains("ნინო", sale.CustomerName));
-        Assert.Equal(SaleStatus.Cancelled, Assert.Single(cancelled.Items).Status);
+        var cancelledSale = Assert.Single(cancelled.Items);
+        Assert.Equal(SaleStatus.Cancelled, cancelledSale.Status);
+        Assert.Equal(0m, cancelledSale.OutstandingAmount);
+        Assert.False(cancelledSale.HasDebt);
+        var draftSale = Assert.Single(drafts.Items);
+        Assert.Equal(0m, draftSale.OutstandingAmount);
+        Assert.False(draftSale.HasDebt);
     }
 
     [Fact]

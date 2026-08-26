@@ -1,0 +1,111 @@
+<UserControl x:Class="StorePos.Desktop.Products.Views.ProductsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:common="clr-namespace:StorePos.Desktop.Common">
+    <UserControl.Resources>
+        <common:DecimalDisplayConverter x:Key="DecimalDisplayConverter" />
+    </UserControl.Resources>
+    <Grid Margin="14">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <TextBlock FontSize="23" FontWeight="SemiBold" Text="პროდუქტები" />
+
+        <Border Grid.Row="1" Margin="0,12,0,8" Padding="10" Background="#EEF3F7"
+                BorderBrush="#C9D4DF" BorderThickness="1" CornerRadius="3">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="2*" />
+                    <ColumnDefinition Width="160" />
+                    <ColumnDefinition Width="210" />
+                    <ColumnDefinition Width="120" />
+                    <ColumnDefinition Width="120" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <TextBlock Grid.Row="0" Grid.Column="0" Text="ძებნა — დასახელება, კოდი ან შტრიხკოდი" />
+                <TextBlock Grid.Row="0" Grid.Column="1" Margin="8,0,0,0" Text="სტატუსი" />
+                <TextBlock Grid.Row="0" Grid.Column="2" Margin="8,0,0,0" Text="ერთეული" />
+                <TextBlock Grid.Row="0" Grid.Column="3" Margin="8,0,0,0" Text="ფასი დან" />
+                <TextBlock Grid.Row="0" Grid.Column="4" Margin="8,0,0,0" Text="ფასი მდე" />
+
+                <TextBox Grid.Row="1" Grid.Column="0" Margin="0,4,0,0"
+                         Text="{Binding Search, UpdateSourceTrigger=PropertyChanged}">
+                    <TextBox.InputBindings>
+                        <KeyBinding Key="Enter" Command="{Binding SearchCommand}" />
+                    </TextBox.InputBindings>
+                </TextBox>
+                <ComboBox Grid.Row="1" Grid.Column="1" Margin="8,4,0,0"
+                          ItemsSource="{Binding StatusOptions}"
+                          SelectedItem="{Binding SelectedStatus}"
+                          DisplayMemberPath="Name" />
+                <ComboBox Grid.Row="1" Grid.Column="2" Margin="8,4,0,0"
+                          ItemsSource="{Binding MeasurementUnitOptions}"
+                          SelectedItem="{Binding SelectedMeasurementUnit}"
+                          DisplayMemberPath="Name" />
+                <TextBox Grid.Row="1" Grid.Column="3" Margin="8,4,0,0"
+                         Text="{Binding PriceFrom, UpdateSourceTrigger=PropertyChanged}" />
+                <TextBox Grid.Row="1" Grid.Column="4" Margin="8,4,0,0"
+                         Text="{Binding PriceTo, UpdateSourceTrigger=PropertyChanged}" />
+                <Button Grid.Row="1" Grid.Column="5" MinWidth="95" Margin="8,4,0,0" Padding="12,5"
+                        Command="{Binding SearchCommand}" Content="ძებნა" />
+            </Grid>
+        </Border>
+
+        <Grid Grid.Row="2" Margin="0,0,0,8">
+            <StackPanel Orientation="Horizontal">
+                <Button MinWidth="130" Margin="0,0,8,0" Padding="10,5"
+                        Command="{Binding CreateCommand}" Content="+ ახალი პროდუქტი" />
+                <Button MinWidth="110" Margin="0,0,8,0" Padding="10,5"
+                        Command="{Binding EditCommand}" Content="რედაქტირება" />
+                <Button MinWidth="110" Margin="0,0,8,0" Padding="10,5"
+                        Command="{Binding ToggleActiveCommand}" Content="{Binding ToggleActiveText}" />
+                <Button MinWidth="95" Padding="10,5"
+                        Command="{Binding RefreshCommand}" Content="განახლება" />
+            </StackPanel>
+            <TextBlock HorizontalAlignment="Right" VerticalAlignment="Center"
+                       Foreground="#B42318" Text="{Binding ErrorMessage}" />
+        </Grid>
+
+        <DataGrid Grid.Row="3"
+                  ItemsSource="{Binding Items}"
+                  SelectedItem="{Binding SelectedItem}"
+                  AutoGenerateColumns="False"
+                  IsReadOnly="True"
+                  SelectionMode="Single"
+                  SelectionUnit="FullRow"
+                  EnableRowVirtualization="True"
+                  EnableColumnVirtualization="True"
+                  VirtualizingPanel.IsVirtualizing="True"
+                  VirtualizingPanel.VirtualizationMode="Recycling">
+            <DataGrid.Columns>
+                <DataGridTextColumn Width="110" Header="კოდი" Binding="{Binding Code}" />
+                <DataGridTextColumn Width="160" Header="შტრიხკოდი" Binding="{Binding Barcode}" />
+                <DataGridTextColumn Width="*" Header="დასახელება" Binding="{Binding Name}" />
+                <DataGridTextColumn Width="180" Header="ერთეული" Binding="{Binding UnitDisplayName}" />
+                <DataGridTextColumn Width="110" Header="ფასი"
+                                    Binding="{Binding Price, Converter={StaticResource DecimalDisplayConverter}}" />
+                <DataGridTextColumn Width="110" Header="სტატუსი" Binding="{Binding StatusName}" />
+            </DataGrid.Columns>
+        </DataGrid>
+
+        <Grid Grid.Row="4" Margin="0,8,0,0">
+            <TextBlock VerticalAlignment="Center" Text="{Binding TotalCount, StringFormat=ნაპოვნია: {0}}" />
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button Width="42" Margin="0,0,8,0" Command="{Binding PreviousPageCommand}" Content="&lt;" />
+                <TextBlock MinWidth="70" VerticalAlignment="Center" TextAlignment="Center"
+                           Text="{Binding PageLabel}" />
+                <Button Width="42" Margin="8,0,0,0" Command="{Binding NextPageCommand}" Content="&gt;" />
+            </StackPanel>
+        </Grid>
+    </Grid>
+</UserControl>

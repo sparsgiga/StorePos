@@ -1,4 +1,5 @@
 using FluentValidation;
+using StorePos.Domain.Common;
 
 namespace StorePos.Application.Sales.Commands.Complete;
 
@@ -11,7 +12,13 @@ public sealed class CompleteSaleCommandValidator : AbstractValidator<CompleteSal
         RuleForEach(command => command.Payments).ChildRules(payment =>
         {
             payment.RuleFor(item => item.PaymentType).IsInEnum();
-            payment.RuleFor(item => item.Amount).GreaterThan(0);
+            payment.RuleFor(item => item.Amount)
+                .Must(amount =>
+                {
+                    var normalized = FinancialPrecision.RoundMoney(amount);
+                    return normalized > 0 &&
+                           normalized <= FinancialPrecision.MaximumMoneyValue;
+                });
         });
     }
 }

@@ -361,7 +361,7 @@
                                         <DataGridTextColumn Width="105"
                                                             ElementStyle="{StaticResource RightAlignedCellText}"
                                                             Header="ჯამი"
-                                                            Binding="{Binding LineTotal, Converter={StaticResource DecimalDisplayConverter}}" />
+                                                            Binding="{Binding LineTotal, StringFormat={}{0:N2}}" />
                                         <DataGridTextColumn Width="2*"
                                                             MinWidth="120"
                                                             ElementStyle="{StaticResource TrimmedCellText}"

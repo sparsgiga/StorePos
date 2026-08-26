@@ -33,7 +33,11 @@ public sealed class DebtSaleWorkflowTests
                 new SaleRepository(context),
                 new UnitOfWork(context))
             .Handle(
-                new AddDebtPaymentCommand(sale.Id, PaymentType.Cash, 60m),
+                new AddDebtPaymentCommand(
+                    sale.Id,
+                    Guid.NewGuid(),
+                    PaymentType.Cash,
+                    60m),
                 CancellationToken.None);
         var afterPayment = DateTime.Now;
 
@@ -79,12 +83,12 @@ public sealed class DebtSaleWorkflowTests
             [new SalePaymentAllocation(PaymentType.Cash, 100m)],
             completed,
             allowDebt: true);
-        laterPartial.AddDebtPayment(PaymentType.Cash, 60m);
+        laterPartial.AddDebtPayment(Guid.NewGuid(), PaymentType.Cash, 60m);
         laterFullyPaid.Complete(
             [new SalePaymentAllocation(PaymentType.Cash, 100m)],
             completed,
             allowDebt: true);
-        laterFullyPaid.AddDebtPayment(PaymentType.Card, 100m);
+        laterFullyPaid.AddDebtPayment(Guid.NewGuid(), PaymentType.Card, 100m);
         await context.SaveChangesAsync();
 
         context.ChangeTracker.Clear();
@@ -137,6 +141,35 @@ public sealed class DebtSaleWorkflowTests
 
         Assert.NotNull(sale.DateUpdated);
         Assert.InRange(sale.DateUpdated.Value, beforeUpdate, afterUpdate);
+    }
+
+    [Fact]
+    public async Task DebtPayment_RetryWithSameOperationIdPersistsOnlyOnce()
+    {
+        await using var context = CreateContext();
+        var sale = CreateSale("20260825-0401", 100m, withCustomer: true);
+        await context.Sales.AddAsync(sale);
+        await context.SaveChangesAsync();
+        sale.Complete([], DateTime.Now, allowDebt: true);
+        await context.SaveChangesAsync();
+        var operationId = Guid.NewGuid();
+        var handler = new AddDebtPaymentCommandHandler(
+            new SaleRepository(context),
+            new UnitOfWork(context));
+        var command = new AddDebtPaymentCommand(
+            sale.Id, operationId, PaymentType.Cash, 25.001m);
+
+        var first = await handler.Handle(command, CancellationToken.None);
+        var retry = await handler.Handle(
+            command with { Amount = 25m },
+            CancellationToken.None);
+
+        Assert.NotNull(first);
+        Assert.NotNull(retry);
+        Assert.Equal(first.Payment.Amount, retry.Payment.Amount);
+        Assert.Single(sale.Payments);
+        Assert.Single(sale.Payments, payment => payment.OperationId == operationId);
+        Assert.Equal(1, sale.FinancialRevision);
     }
 
     private static Sale CreateSale(string saleNumber, decimal total, bool withCustomer)

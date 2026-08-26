@@ -322,10 +322,14 @@ namespace StorePos.Persistence.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("Barcode");
+                    b.HasIndex("Barcode")
+                        .IsUnique()
+                        .HasFilter("[Barcode] IS NOT NULL");
 
                     b.HasIndex("Code")
                         .IsUnique();
+
+                    b.HasIndex("IsActive");
 
                     b.HasIndex("MeasurementUnitId");
 
@@ -372,6 +376,9 @@ namespace StorePos.Persistence.Migrations
                     b.Property<DateTime?>("DateUpdated")
                         .HasColumnType("datetime2");
 
+                    b.Property<long>("FinancialRevision")
+                        .HasColumnType("bigint");
+
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
                         .IsRequired()
@@ -387,8 +394,8 @@ namespace StorePos.Persistence.Migrations
                         .HasColumnType("int");
 
                     b.Property<decimal>("TotalAmount")
-                        .HasPrecision(18, 5)
-                        .HasColumnType("decimal(18,5)");
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
 
                     b.HasKey("Id");
 
@@ -432,8 +439,8 @@ namespace StorePos.Persistence.Migrations
                         .HasColumnType("bit");
 
                     b.Property<decimal>("LineTotal")
-                        .HasPrecision(18, 5)
-                        .HasColumnType("decimal(18,5)");
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<int?>("MeasurementUnitId")
                         .HasColumnType("int")
@@ -487,14 +494,17 @@ namespace StorePos.Persistence.Migrations
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
 
                     b.Property<decimal>("Amount")
-                        .HasPrecision(18, 5)
-                        .HasColumnType("decimal(18,5)");
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<DateTime>("DateCreated")
                         .HasColumnType("datetime2");
 
                     b.Property<DateTime?>("DateUpdated")
                         .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("OperationId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<int>("PaymentKind")
                         .HasColumnType("int");
@@ -506,6 +516,10 @@ namespace StorePos.Persistence.Migrations
                         .HasColumnType("bigint");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("OperationId")
+                        .IsUnique()
+                        .HasFilter("[OperationId] IS NOT NULL");
 
                     b.HasIndex("SaleId");
 

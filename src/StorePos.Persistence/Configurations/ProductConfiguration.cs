@@ -38,8 +38,11 @@ public sealed class ProductConfiguration : IEntityTypeConfiguration<Product>
         builder.Property(x => x.DateUpdated).HasColumnType("datetime2");
 
         builder.HasIndex(x => x.Code).IsUnique();
-        builder.HasIndex(x => x.Barcode);
+        builder.HasIndex(x => x.Barcode)
+            .IsUnique()
+            .HasFilter("[Barcode] IS NOT NULL");
         builder.HasIndex(x => x.Name);
+        builder.HasIndex(x => x.IsActive);
 
         builder.HasOne<MeasurementUnit>()
             .WithMany()

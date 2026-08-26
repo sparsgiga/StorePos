@@ -236,7 +236,7 @@ public sealed class CompleteSaleDialogViewModel : ObservableObject
                 return false;
             }
 
-            var roundedAmount = decimal.Round(amount, 5, MidpointRounding.AwayFromZero);
+            var roundedAmount = FinancialInputPrecision.RoundMoney(amount);
             if (roundedAmount > 0)
             {
                 result.Add(new CompleteSalePaymentRequest(input.PaymentType, roundedAmount));

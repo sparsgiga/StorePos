@@ -1,4 +1,5 @@
 using StorePos.Domain.Base;
+using StorePos.Domain.Common;
 
 namespace StorePos.Domain.Aggregates.Sale;
 
@@ -127,15 +128,35 @@ public sealed class SaleItem : AuditableEntity<long>
 
     internal void IncreaseQuantity(decimal quantity)
     {
-        if (quantity <= 0)
+        var normalizedQuantity = FinancialPrecision.RoundQuantity(quantity);
+        if (normalizedQuantity <= 0 ||
+            normalizedQuantity > FinancialPrecision.MaximumFiveScaleValue)
         {
             throw new ArgumentOutOfRangeException(
                 nameof(quantity),
                 "Quantity must be greater than zero.");
         }
 
-        Quantity += quantity;
-        LineTotal = Quantity * UnitPrice;
+        decimal combinedQuantity;
+        try
+        {
+            combinedQuantity = checked(Quantity + normalizedQuantity);
+        }
+        catch (OverflowException)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(quantity),
+                "Quantity is too large.");
+        }
+
+        combinedQuantity = FinancialPrecision.RoundQuantity(combinedQuantity);
+        if (combinedQuantity > FinancialPrecision.MaximumFiveScaleValue)
+        {
+            throw new ArgumentOutOfRangeException(nameof(quantity), "Quantity is too large.");
+        }
+
+        Quantity = combinedQuantity;
+        LineTotal = FinancialPrecision.CalculateLineTotal(Quantity, UnitPrice);
     }
 
     internal void UpdateDetails(
@@ -161,14 +182,18 @@ public sealed class SaleItem : AuditableEntity<long>
                 nameof(productName));
         }
 
-        if (quantity <= 0)
+        var normalizedQuantity = FinancialPrecision.RoundQuantity(quantity);
+        if (normalizedQuantity <= 0 ||
+            normalizedQuantity > FinancialPrecision.MaximumFiveScaleValue)
         {
             throw new ArgumentOutOfRangeException(
                 nameof(quantity),
                 "Quantity must be greater than zero.");
         }
 
-        if (unitPrice < MinimumUnitPrice)
+        var normalizedUnitPrice = FinancialPrecision.RoundUnitPrice(unitPrice);
+        if (normalizedUnitPrice < MinimumUnitPrice ||
+            normalizedUnitPrice > FinancialPrecision.MaximumFiveScaleValue)
         {
             throw new ArgumentOutOfRangeException(
                 nameof(unitPrice),
@@ -187,9 +212,9 @@ public sealed class SaleItem : AuditableEntity<long>
             ProductName = normalizedProductName;
         }
 
-        Quantity = quantity;
-        UnitPrice = unitPrice;
-        LineTotal = quantity * unitPrice;
+        Quantity = normalizedQuantity;
+        UnitPrice = normalizedUnitPrice;
+        LineTotal = FinancialPrecision.CalculateLineTotal(Quantity, UnitPrice);
         Comment = normalizedComment;
     }
 

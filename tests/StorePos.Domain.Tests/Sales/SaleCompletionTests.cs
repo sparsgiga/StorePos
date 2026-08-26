@@ -57,8 +57,8 @@ public sealed class SaleCompletionTests
     }
 
     [Theory]
-    [InlineData(271.99999)]
-    [InlineData(272.00001)]
+    [InlineData(271.994)]
+    [InlineData(272.006)]
     public void Complete_PaymentTotalDoesNotMatch_ThrowsWithoutChangingSale(
         decimal paymentAmount)
     {
@@ -171,7 +171,7 @@ public sealed class SaleCompletionTests
     }
 
     [Fact]
-    public void Complete_UsesFiveDecimalPrecision()
+    public void Complete_UsesCanonicalMoneyPrecision()
     {
         var sale = Sale.Create("20260825-0001");
         sale.AddManualItem("პროდუქტი", 3m, 0.111111m);
@@ -181,7 +181,24 @@ public sealed class SaleCompletionTests
             CompletionDate);
 
         Assert.Equal(SaleStatus.Completed, sale.Status);
-        Assert.Equal(0.33333m, Assert.Single(sale.Payments).Amount);
+        Assert.Equal(0.33m, Assert.Single(sale.Payments).Amount);
+        Assert.Equal(0.33m, sale.TotalAmount);
+    }
+
+    [Fact]
+    public void Complete_RoundsEverySplitPaymentBeforeSumming()
+    {
+        var sale = CreateSaleWithTotal(0.02m);
+
+        sale.Complete(
+            [
+                new SalePaymentAllocation(PaymentType.Cash, 0.005m),
+                new SalePaymentAllocation(PaymentType.Card, 0.005m)
+            ],
+            CompletionDate);
+
+        Assert.Equal([0.01m, 0.01m], sale.Payments.Select(payment => payment.Amount));
+        Assert.Equal(0.02m, sale.PaidAmount);
     }
 
     [Fact]

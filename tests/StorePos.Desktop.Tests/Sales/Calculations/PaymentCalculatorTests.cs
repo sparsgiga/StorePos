@@ -50,12 +50,22 @@ public sealed class PaymentCalculatorTests
     }
 
     [Fact]
-    public void Comparison_UsesFiveDecimalPrecision()
+    public void Comparison_UsesMoneyPrecision()
     {
         var result = PaymentCalculator.Calculate(0.333333m, [0.33333m]);
 
         Assert.True(result.CanComplete);
         Assert.Equal(0m, result.RemainingAmount);
+    }
+
+    [Fact]
+    public void SplitPaymentsAreRoundedIndividuallyBeforeSumming()
+    {
+        var result = PaymentCalculator.Calculate(0.02m, [0.005m, 0.005m]);
+
+        Assert.Equal(0.02m, result.PaidAmount);
+        Assert.Equal(0m, result.RemainingAmount);
+        Assert.True(result.CanComplete);
     }
 
     [Fact]

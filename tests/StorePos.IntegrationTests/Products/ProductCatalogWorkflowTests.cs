@@ -185,8 +185,8 @@ public sealed class ProductCatalogWorkflowTests
         Assert.Equal(selectedUnit.Id, result.MeasurementUnitId);
         Assert.Equal(2m, result.Quantity);
         Assert.Equal(0.444m, result.UnitPrice);
-        Assert.Equal(0.888m, result.LineTotal);
-        Assert.Equal(0.888m, result.SaleTotalAmount);
+        Assert.Equal(0.89m, result.LineTotal);
+        Assert.Equal(0.89m, result.SaleTotalAmount);
         Assert.False(result.IsManual);
 
         var product = Assert.Single(await context.Products.ToArrayAsync());

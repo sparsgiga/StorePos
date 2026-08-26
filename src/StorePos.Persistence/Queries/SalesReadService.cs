@@ -98,8 +98,10 @@ public sealed class SalesReadService(StorePosDbContext context) : ISalesReadServ
                     .Where(payment => payment.PaymentType == PaymentType.Other)
                     .Sum(payment => (decimal?)payment.Amount) ?? 0m,
                 sale.Payments.Sum(payment => (decimal?)payment.Amount) ?? 0m,
-                sale.TotalAmount -
-                    (sale.Payments.Sum(payment => (decimal?)payment.Amount) ?? 0m),
+                sale.Status == SaleStatus.Completed
+                    ? sale.TotalAmount -
+                        (sale.Payments.Sum(payment => (decimal?)payment.Amount) ?? 0m)
+                    : 0m,
                 sale.Status == SaleStatus.Completed &&
                     sale.TotalAmount -
                     (sale.Payments.Sum(payment => (decimal?)payment.Amount) ?? 0m) > 0m))
@@ -258,8 +260,9 @@ public sealed class SalesReadService(StorePosDbContext context) : ISalesReadServ
 
         var paidAmount = SalePayment.RoundAmount(
             payments.Sum(payment => payment.Amount));
-        var outstandingAmount = SalePayment.RoundAmount(
-            sale.TotalAmount - paidAmount);
+        var outstandingAmount = sale.Status == SaleStatus.Completed
+            ? SalePayment.RoundAmount(sale.TotalAmount - paidAmount)
+            : 0m;
 
         return new SaleDetailsModel(
             sale.Id,

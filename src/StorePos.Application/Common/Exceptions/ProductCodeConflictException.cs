@@ -1,7 +1,7 @@
 namespace StorePos.Application.Common.Exceptions;
 
 public sealed class ProductCodeConflictException(string code)
-    : Exception($"A product with code '{code}' already exists.")
+    : Exception($"პროდუქტი კოდით „{code}“ უკვე არსებობს.")
 {
     public string Code { get; } = code;
 }

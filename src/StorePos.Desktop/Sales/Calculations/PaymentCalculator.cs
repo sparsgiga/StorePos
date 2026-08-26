@@ -2,8 +2,6 @@ namespace StorePos.Desktop.Sales.Calculations;
 
 public static class PaymentCalculator
 {
-    private const int AmountScale = 5;
-
     public static PaymentCalculation Calculate(
         decimal totalAmount,
         IEnumerable<decimal> paymentAmounts,
@@ -14,9 +12,22 @@ public static class PaymentCalculator
 
         var amounts = paymentAmounts.ToArray();
         var isValid = amounts.All(amount => amount >= 0);
-        var paidAmount = Round(amounts.Sum());
-        var roundedTotal = Round(totalAmount);
-        var remainingAmount = Round(roundedTotal - paidAmount);
+        var normalizedAmounts = amounts
+            .Select(FinancialInputPrecision.RoundMoney)
+            .ToArray();
+        decimal paidAmount;
+        try
+        {
+            paidAmount = FinancialInputPrecision.RoundMoney(normalizedAmounts.Sum());
+        }
+        catch (OverflowException)
+        {
+            return new PaymentCalculation(0m, 0m, false, false);
+        }
+
+        var roundedTotal = FinancialInputPrecision.RoundMoney(totalAmount);
+        var remainingAmount = FinancialInputPrecision.RoundMoney(
+            roundedTotal - paidAmount);
 
         var hasActualDebt = remainingAmount > 0;
         var canComplete = isValid &&
@@ -31,7 +42,4 @@ public static class PaymentCalculator
             isValid,
             canComplete);
     }
-
-    private static decimal Round(decimal amount)
-        => decimal.Round(amount, AmountScale, MidpointRounding.AwayFromZero);
 }

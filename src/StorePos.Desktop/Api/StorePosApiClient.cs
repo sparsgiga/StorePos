@@ -126,6 +126,78 @@ public sealed class StorePosApiClient(HttpClient httpClient) : IStorePosApiClien
                    "The API returned an empty product-creation-defaults response.");
     }
 
+    public async Task<PagedResultDto<ProductListItemDto>> GetProductsAsync(
+        ProductListFilter filter,
+        CancellationToken cancellationToken = default)
+    {
+        var query = new QueryStringBuilder()
+            .Add("search", filter.Search)
+            .Add("status", filter.Status)
+            .Add("measurementUnitId", filter.MeasurementUnitId)
+            .Add("priceFrom", filter.PriceFrom)
+            .Add("priceTo", filter.PriceTo)
+            .Add("pageNumber", filter.PageNumber)
+            .Add("pageSize", filter.PageSize);
+        using var response = await httpClient.GetAsync($"api/products{query}", cancellationToken);
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<PagedResultDto<ProductListItemDto>>(
+                   JsonOptions,
+                   cancellationToken)
+               ?? throw new InvalidOperationException("The API returned an empty product list.");
+    }
+
+    public async Task<ProductDetailsDto> GetProductAsync(
+        long productId,
+        CancellationToken cancellationToken = default)
+    {
+        using var response = await httpClient.GetAsync($"api/products/{productId}", cancellationToken);
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<ProductDetailsDto>(JsonOptions, cancellationToken)
+               ?? throw new InvalidOperationException("The API returned empty product details.");
+    }
+
+    public async Task<ProductMutationDto> CreateProductAsync(
+        SaveProductRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        using var response = await httpClient.PostAsJsonAsync(
+            "api/products", request, JsonOptions, cancellationToken);
+        await ThrowIfProductConflictAsync(response, cancellationToken);
+        response.EnsureSuccessStatusCode();
+        return await ReadProductMutationAsync(response, cancellationToken);
+    }
+
+    public async Task<ProductMutationDto> UpdateProductAsync(
+        long productId,
+        SaveProductRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        using var response = await httpClient.PutAsJsonAsync(
+            $"api/products/{productId}", request, JsonOptions, cancellationToken);
+        await ThrowIfProductConflictAsync(response, cancellationToken);
+        response.EnsureSuccessStatusCode();
+        return await ReadProductMutationAsync(response, cancellationToken);
+    }
+
+    public async Task<ProductMutationDto> DeactivateProductAsync(
+        long productId,
+        CancellationToken cancellationToken = default)
+    {
+        using var response = await httpClient.DeleteAsync($"api/products/{productId}", cancellationToken);
+        response.EnsureSuccessStatusCode();
+        return await ReadProductMutationAsync(response, cancellationToken);
+    }
+
+    public async Task<ProductMutationDto> ActivateProductAsync(
+        long productId,
+        CancellationToken cancellationToken = default)
+    {
+        using var response = await httpClient.PostAsync(
+            $"api/products/{productId}/activate", null, cancellationToken);
+        response.EnsureSuccessStatusCode();
+        return await ReadProductMutationAsync(response, cancellationToken);
+    }
+
     public async Task<AddProductSaleItemResponse> AddProductSaleItemAsync(
         long saleId,
         AddProductSaleItemRequest request,
@@ -455,6 +527,14 @@ public sealed class StorePosApiClient(HttpClient httpClient) : IStorePosApiClien
                cancellationToken)
            ?? throw new InvalidOperationException("The API returned an empty customer response.");
 
+    private static async Task<ProductMutationDto> ReadProductMutationAsync(
+        HttpResponseMessage response,
+        CancellationToken cancellationToken)
+        => await response.Content.ReadFromJsonAsync<ProductMutationDto>(
+               JsonOptions,
+               cancellationToken)
+           ?? throw new InvalidOperationException("The API returned an empty product response.");
+
     private static void ThrowIfCustomerConflict(HttpResponseMessage response)
     {
         if (response.StatusCode == HttpStatusCode.Conflict)
@@ -475,11 +555,18 @@ public sealed class StorePosApiClient(HttpClient httpClient) : IStorePosApiClien
         var problem = await response.Content.ReadFromJsonAsync<ApiProblemDetails>(
             JsonOptions,
             cancellationToken);
-        var kind = problem?.Title?.Contains("code", StringComparison.OrdinalIgnoreCase) == true
-            ? ProductConflictKind.Code
-            : ProductConflictKind.Barcode;
+        var kind = problem?.Title switch
+        {
+            { } title when title.Contains("barcode", StringComparison.OrdinalIgnoreCase) =>
+                ProductConflictKind.Barcode,
+            { } title when title.Contains("code", StringComparison.OrdinalIgnoreCase) =>
+                ProductConflictKind.Code,
+            { } title when title.Contains("measurement", StringComparison.OrdinalIgnoreCase) =>
+                ProductConflictKind.MeasurementUnit,
+            _ => ProductConflictKind.Unknown
+        };
 
-        throw new ProductConflictException(kind);
+        throw new ProductConflictException(kind, problem?.Detail);
     }
 
     private static async Task ThrowIfSaleOperationConflictAsync(
@@ -520,6 +607,11 @@ public sealed class StorePosApiClient(HttpClient httpClient) : IStorePosApiClien
 
         public QueryStringBuilder Add(string name, int value)
             => Add(name, value.ToString(CultureInfo.InvariantCulture));
+
+        public QueryStringBuilder Add(string name, decimal? value)
+            => value.HasValue
+                ? Add(name, value.Value.ToString(CultureInfo.InvariantCulture))
+                : this;
 
         public QueryStringBuilder Add(string name, bool? value)
             => value.HasValue ? Add(name, value.Value ? "true" : "false") : this;

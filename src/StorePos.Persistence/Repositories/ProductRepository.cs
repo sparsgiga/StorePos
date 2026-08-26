@@ -19,7 +19,7 @@ public sealed class ProductRepository(StorePosDbContext context)
         CancellationToken cancellationToken = default)
         => Entities
             .AsNoTracking()
-            .FirstOrDefaultAsync(product => product.Barcode == barcode, cancellationToken);
+            .SingleOrDefaultAsync(product => product.Barcode == barcode, cancellationToken);
 
     public Task<Product?> GetByCodeAsync(
         string code,
@@ -27,4 +27,22 @@ public sealed class ProductRepository(StorePosDbContext context)
         => Entities
             .AsNoTracking()
             .SingleOrDefaultAsync(product => product.Code == code, cancellationToken);
+
+    public Task<bool> CodeExistsAsync(
+        string code,
+        long? excludingProductId = null,
+        CancellationToken cancellationToken = default)
+        => Entities.AnyAsync(
+            product => product.Code == code &&
+                       (!excludingProductId.HasValue || product.Id != excludingProductId.Value),
+            cancellationToken);
+
+    public Task<bool> BarcodeExistsAsync(
+        string barcode,
+        long? excludingProductId = null,
+        CancellationToken cancellationToken = default)
+        => Entities.AnyAsync(
+            product => product.Barcode == barcode &&
+                       (!excludingProductId.HasValue || product.Id != excludingProductId.Value),
+            cancellationToken);
 }

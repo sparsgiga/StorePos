@@ -1,0 +1,47 @@
+using MediatR;
+using StorePos.Application.Common.Exceptions;
+using StorePos.Domain.Aggregates.MeasurementUnit;
+using StorePos.Domain.Aggregates.Product;
+using StorePos.Domain.Interfaces;
+
+namespace StorePos.Application.Products.Commands.Create;
+
+public sealed class CreateProductCommandHandler(
+    IProductRepository productRepository,
+    IMeasurementUnitRepository measurementUnitRepository,
+    IUnitOfWork unitOfWork) : IRequestHandler<CreateProductCommand, ProductCommandResult>
+{
+    public async Task<ProductCommandResult> Handle(
+        CreateProductCommand request,
+        CancellationToken cancellationToken)
+    {
+        var code = request.Code.Trim();
+        var barcode = request.Barcode.Trim();
+        if (await productRepository.CodeExistsAsync(code, cancellationToken: cancellationToken))
+        {
+            throw new ProductCodeConflictException(code);
+        }
+
+        if (await productRepository.BarcodeExistsAsync(barcode, cancellationToken: cancellationToken))
+        {
+            throw new ProductBarcodeConflictException(barcode);
+        }
+
+        if (await measurementUnitRepository.GetActiveByIdAsync(
+                request.MeasurementUnitId,
+                cancellationToken) is null)
+        {
+            throw new ProductMeasurementUnitNotAvailableException(request.MeasurementUnitId);
+        }
+
+        var product = Product.Create(
+            code,
+            barcode,
+            request.Name,
+            request.MeasurementUnitId,
+            request.Price);
+        await productRepository.AddAsync(product, cancellationToken);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+        return product.ToResult();
+    }
+}

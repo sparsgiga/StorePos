@@ -33,6 +33,12 @@ public sealed class ApiExceptionHandler(ILogger<ApiExceptionHandler> logger)
                 Title = "Product code already exists",
                 Detail = conflict.Message
             },
+            ProductMeasurementUnitNotAvailableException conflict => new ProblemDetails
+            {
+                Status = StatusCodes.Status409Conflict,
+                Title = "Measurement unit is unavailable",
+                Detail = "არჩეული საზომი ერთეული არ არსებობს ან არააქტიურია."
+            },
             SaleOperationConflictException conflict => new ProblemDetails
             {
                 Status = StatusCodes.Status409Conflict,

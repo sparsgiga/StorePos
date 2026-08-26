@@ -1,4 +1,5 @@
 using StorePos.Domain.Base;
+using StorePos.Domain.Common;
 using StorePos.Domain.Enums;
 
 namespace StorePos.Domain.Aggregates.Sale;
@@ -59,15 +60,18 @@ public sealed class Sale : AuditableEntity<long>, IAggregateRoot
 
     public byte[] RowVersion { get; private set; } = [];
 
+    public long FinancialRevision { get; private set; }
+
     public IReadOnlyCollection<SaleItem> Items => _items;
 
     public IReadOnlyCollection<SalePayment> Payments => _payments;
 
-    public decimal PaidAmount => SalePayment.RoundAmount(
-        _payments.Sum(payment => payment.Amount));
+    public decimal PaidAmount => FinancialPrecision.SumMoney(
+        _payments.Select(payment => payment.Amount));
 
-    public decimal OutstandingAmount => SalePayment.RoundAmount(
-        TotalAmount - PaidAmount);
+    public decimal OutstandingAmount => Status == SaleStatus.Completed
+        ? FinancialPrecision.RoundMoney(TotalAmount - PaidAmount)
+        : 0m;
 
     public bool HasDebt => Status == SaleStatus.Completed && OutstandingAmount > 0;
 
@@ -253,16 +257,15 @@ public sealed class Sale : AuditableEntity<long>, IAggregateRoot
 
         var newPayments = allocations
             .Where(payment => SalePayment.RoundAmount(payment.Amount) > 0)
-            .Select(payment => SalePayment.Create(
+            .Select(payment => SalePayment.CreateCompletion(
                 Id,
                 payment.PaymentType,
-                SalePaymentKind.Completion,
                 payment.Amount))
             .ToArray();
 
-        var paymentTotal = SalePayment.RoundAmount(
-            newPayments.Sum(payment => payment.Amount));
-        var saleTotal = SalePayment.RoundAmount(TotalAmount);
+        var paymentTotal = FinancialPrecision.SumMoney(
+            newPayments.Select(payment => payment.Amount));
+        var saleTotal = FinancialPrecision.RoundMoney(TotalAmount);
 
         if (paymentTotal > saleTotal)
         {
@@ -270,7 +273,7 @@ public sealed class Sale : AuditableEntity<long>, IAggregateRoot
                 "The payment total cannot exceed the sale total.");
         }
 
-        var outstandingAmount = SalePayment.RoundAmount(saleTotal - paymentTotal);
+        var outstandingAmount = FinancialPrecision.RoundMoney(saleTotal - paymentTotal);
 
         if (!allowDebt && outstandingAmount != 0)
         {
@@ -290,12 +293,35 @@ public sealed class Sale : AuditableEntity<long>, IAggregateRoot
         DateCancelled = null;
     }
 
-    public SalePayment AddDebtPayment(PaymentType paymentType, decimal amount)
+    public SalePayment AddDebtPayment(
+        Guid operationId,
+        PaymentType paymentType,
+        decimal amount)
     {
         if (Status != SaleStatus.Completed)
         {
             throw new InvalidOperationException(
                 "Debt payments can only be added to completed sales.");
+        }
+
+        if (operationId == Guid.Empty)
+        {
+            throw new ArgumentException("Operation ID is required.", nameof(operationId));
+        }
+
+        var normalizedAmount = FinancialPrecision.RoundMoney(amount);
+        var existingPayment = _payments.SingleOrDefault(payment =>
+            payment.OperationId == operationId);
+        if (existingPayment is not null)
+        {
+            if (existingPayment.PaymentType != paymentType ||
+                existingPayment.Amount != normalizedAmount)
+            {
+                throw new InvalidOperationException(
+                    "The debt payment operation was already used with different details.");
+            }
+
+            return existingPayment;
         }
 
         var outstandingAmount = OutstandingAmount;
@@ -304,11 +330,11 @@ public sealed class Sale : AuditableEntity<long>, IAggregateRoot
             throw new InvalidOperationException("The sale has no outstanding debt.");
         }
 
-        var payment = SalePayment.Create(
+        var payment = SalePayment.CreateDebtRepayment(
             Id,
             paymentType,
-            SalePaymentKind.DebtRepayment,
-            amount);
+            amount,
+            operationId);
 
         if (payment.Amount > outstandingAmount)
         {
@@ -317,6 +343,7 @@ public sealed class Sale : AuditableEntity<long>, IAggregateRoot
         }
 
         _payments.Add(payment);
+        FinancialRevision = checked(FinancialRevision + 1);
         return payment;
     }
 
@@ -364,7 +391,8 @@ public sealed class Sale : AuditableEntity<long>, IAggregateRoot
     }
 
     private void RecalculateTotal()
-        => TotalAmount = _items.Sum(item => item.LineTotal);
+        => TotalAmount = FinancialPrecision.SumMoney(
+            _items.Select(item => item.LineTotal));
 
     private SaleItem GetItem(long saleItemId)
         => _items.SingleOrDefault(item => item.Id == saleItemId)

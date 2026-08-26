@@ -1,7 +1,7 @@
 namespace StorePos.Application.Common.Exceptions;
 
 public sealed class ProductBarcodeConflictException(string barcode)
-    : Exception($"A product with barcode '{barcode}' already exists.")
+    : Exception($"პროდუქტი შტრიხკოდით „{barcode}“ უკვე არსებობს.")
 {
     public string Barcode { get; } = barcode;
 }

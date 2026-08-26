@@ -30,8 +30,10 @@ public sealed class SaleConfiguration : IEntityTypeConfiguration<Sale>
             .HasMaxLength(Sale.CustomerIdentificationNumberMaxLength);
 
         builder.Property(x => x.TotalAmount)
-            .HasPrecision(18, 5)
+            .HasPrecision(18, 2)
             .IsRequired();
+
+        builder.Property(x => x.FinancialRevision).IsRequired();
 
         builder.Property(x => x.Comment)
             .HasMaxLength(Sale.CommentMaxLength);

@@ -24,4 +24,8 @@ public interface ISaleRepository :
     Task<Sale?> GetCompletedForUpdateAsync(
         long saleId,
         CancellationToken cancellationToken = default);
+
+    Task<Sale?> GetByDebtPaymentOperationIdAsync(
+        Guid operationId,
+        CancellationToken cancellationToken = default);
 }

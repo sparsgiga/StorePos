@@ -17,7 +17,11 @@ public sealed class SalePaymentsController(ISender sender) : ControllerBase
         CancellationToken cancellationToken)
     {
         var result = await sender.Send(
-            new AddDebtPaymentCommand(saleId, request.PaymentType, request.Amount),
+            new AddDebtPaymentCommand(
+                saleId,
+                request.OperationId,
+                request.PaymentType,
+                request.Amount),
             cancellationToken);
         return result is null ? NotFound() : Ok(result);
     }

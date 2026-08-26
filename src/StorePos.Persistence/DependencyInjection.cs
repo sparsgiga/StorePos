@@ -35,6 +35,7 @@ public static class DependencyInjection
         services.AddScoped<ISalesReadService, SalesReadService>();
         services.AddScoped<ICustomerReadService, CustomerReadService>();
         services.AddScoped<IProductReadService, ProductReadService>();
+        services.AddScoped<IProductManagementReadService, ProductManagementReadService>();
         services.AddScoped<IProductCreationDefaultsReadService, ProductCreationDefaultsReadService>();
         services.AddScoped<IMeasurementUnitReadService, MeasurementUnitReadService>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();

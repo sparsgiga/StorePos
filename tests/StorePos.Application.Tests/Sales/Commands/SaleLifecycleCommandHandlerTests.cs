@@ -107,7 +107,7 @@ public sealed class SaleLifecycleCommandHandlerTests
             unitOfWork);
 
         var result = await handler.Handle(
-            new AddDebtPaymentCommand(1, PaymentType.Cash, 60m),
+            new AddDebtPaymentCommand(1, Guid.NewGuid(), PaymentType.Cash, 60m),
             CancellationToken.None);
 
         Assert.NotNull(result);
@@ -145,6 +145,14 @@ public sealed class SaleLifecycleCommandHandlerTests
             long saleId,
             CancellationToken cancellationToken = default)
             => Task.FromResult(sale?.Status == SaleStatus.Completed ? sale : null);
+
+        public Task<Sale?> GetByDebtPaymentOperationIdAsync(
+            Guid operationId,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult(sale?.Payments.Any(payment =>
+                    payment.OperationId == operationId) == true
+                ? sale
+                : null);
 
         public Task<Sale?> GetByIdAsync(
             long id,

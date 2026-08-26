@@ -38,6 +38,37 @@ public sealed class SaleManualItemTests
     }
 
     [Fact]
+    public void AddManualItem_RoundsLineTotalToCentsAwayFromZero()
+    {
+        var sale = Sale.Create("20260824-0001");
+
+        var item = sale.AddManualItem("Item", 1m, 12.66565m);
+
+        Assert.Equal(12.67m, item.LineTotal);
+        Assert.Equal(12.67m, sale.TotalAmount);
+    }
+
+    [Fact]
+    public void AddManualItem_ThreeAtCalculatedUnitPriceProducesTenGEL()
+    {
+        var sale = Sale.Create("20260824-0001");
+
+        var item = sale.AddManualItem("Item", 3m, 3.33333m);
+
+        Assert.Equal(10.00m, item.LineTotal);
+        Assert.Equal(item.LineTotal, sale.TotalAmount);
+    }
+
+    [Fact]
+    public void AddManualItem_LineTotalThatRoundsToZeroIsRejected()
+    {
+        var sale = Sale.Create("20260824-0001");
+
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            sale.AddManualItem("Item", 0.00001m, 0.00001m));
+    }
+
+    [Fact]
     public void AddManualItem_CompletedSale_Throws()
     {
         var sale = Sale.Create("20260824-0001");

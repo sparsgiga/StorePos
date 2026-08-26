@@ -35,12 +35,14 @@ public sealed class ManualItemCalculatorTests
     }
 
     [Fact]
-    public void Calculation_RoundsToFivePlacesAwayFromZero()
+    public void Calculation_RoundsUnitPriceToFiveAndLineTotalToTwoPlaces()
     {
         var success = ManualItemCalculator.TryCalculate(1m, 0.123456m, null, out var result);
 
         Assert.True(success);
-        Assert.Equal(0.12346m, result!.Value);
+        Assert.Equal(0.12m, result!.Value);
+        Assert.Equal(0.12346m, result.UnitPrice);
+        Assert.Equal(0.12m, result.LineTotal);
     }
 
     [Theory]
@@ -72,13 +74,23 @@ public sealed class ManualItemCalculatorTests
     [Theory]
     [InlineData(true)]
     [InlineData(false)]
-    public void ZeroPriceCalculation_IsValid(bool calculateLineTotal)
+    public void ZeroPriceCalculation_IsRejected(bool calculateLineTotal)
     {
         var success = calculateLineTotal
             ? ManualItemCalculator.TryCalculate(5m, 0m, null, out var result)
             : ManualItemCalculator.TryCalculate(5m, null, 0m, out result);
 
+        Assert.False(success);
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public void QuantityAndDesiredTotal_RecomputesCanonicalLineTotal()
+    {
+        var success = ManualItemCalculator.TryCalculate(3m, null, 10m, out var result);
+
         Assert.True(success);
-        Assert.Equal(0m, result!.Value);
+        Assert.Equal(3.33333m, result!.UnitPrice);
+        Assert.Equal(10.00m, result.LineTotal);
     }
 }

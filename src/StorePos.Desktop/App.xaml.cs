@@ -7,6 +7,8 @@ using StorePos.Desktop.Common;
 using StorePos.Desktop.Configuration;
 using StorePos.Desktop.History.Dialogs;
 using StorePos.Desktop.History.ViewModels;
+using StorePos.Desktop.Products.Dialogs;
+using StorePos.Desktop.Products.ViewModels;
 using StorePos.Desktop.Sales.Dialogs;
 using StorePos.Desktop.Sales.ViewModels;
 using StorePos.Desktop.Startup;
@@ -108,10 +110,12 @@ public partial class App : Application
         var salesWorkspace = new SalesWorkspaceViewModel(apiClient, dialogService);
         var salesHistory = new SalesHistoryViewModel(apiClient, historyDialogService);
         var soldProducts = new SoldProductsViewModel(apiClient, historyDialogService);
+        var productDialogService = new ProductDialogService(apiClient);
         _mainWindowViewModel = new MainWindowViewModel(
             salesWorkspace,
             salesHistory,
-            soldProducts);
+            soldProducts,
+            () => new ProductsViewModel(apiClient, productDialogService));
 
         await _mainWindowViewModel.InitializeAsync();
 

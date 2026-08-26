@@ -1,4 +1,5 @@
 using StorePos.Domain.Base;
+using StorePos.Domain.Common;
 
 namespace StorePos.Domain.Aggregates.Product;
 
@@ -20,10 +21,52 @@ public sealed class Product : AuditableEntity<long>, IAggregateRoot
         int measurementUnitId,
         decimal price)
     {
+        ApplyDetails(code, barcode, name, measurementUnitId, price, requireBarcode: false);
+        IsActive = true;
+    }
+
+    public string Code { get; private set; } = string.Empty;
+
+    public string? Barcode { get; private set; }
+
+    public string Name { get; private set; } = string.Empty;
+
+    public int MeasurementUnitId { get; private set; }
+
+    public decimal Price { get; private set; }
+
+    public bool IsActive { get; private set; }
+
+    public static Product Create(
+        string code,
+        string? barcode,
+        string name,
+        int measurementUnitId,
+        decimal price)
+        => new(code, barcode, name, measurementUnitId, price);
+
+    public void UpdateDetails(
+        string code,
+        string barcode,
+        string name,
+        int measurementUnitId,
+        decimal price)
+        => ApplyDetails(code, barcode, name, measurementUnitId, price, requireBarcode: true);
+
+    public void Activate() => IsActive = true;
+
+    public void Deactivate() => IsActive = false;
+
+    private void ApplyDetails(
+        string code,
+        string? barcode,
+        string name,
+        int measurementUnitId,
+        decimal price,
+        bool requireBarcode)
+    {
         var normalizedCode = code?.Trim();
-        var normalizedBarcode = string.IsNullOrWhiteSpace(barcode)
-            ? null
-            : barcode.Trim();
+        var normalizedBarcode = string.IsNullOrWhiteSpace(barcode) ? null : barcode.Trim();
         var normalizedName = name?.Trim();
 
         if (string.IsNullOrWhiteSpace(normalizedCode))
@@ -52,6 +95,11 @@ public sealed class Product : AuditableEntity<long>, IAggregateRoot
                 nameof(barcode));
         }
 
+        if (requireBarcode && normalizedBarcode is null)
+        {
+            throw new ArgumentException("Product barcode is required.", nameof(barcode));
+        }
+
         if (string.IsNullOrWhiteSpace(normalizedName))
         {
             throw new ArgumentException("Product name is required.", nameof(name));
@@ -66,7 +114,9 @@ public sealed class Product : AuditableEntity<long>, IAggregateRoot
 
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(measurementUnitId);
 
-        if (price < MinimumPrice)
+        var normalizedPrice = FinancialPrecision.RoundUnitPrice(price);
+        if (normalizedPrice < MinimumPrice ||
+            normalizedPrice > FinancialPrecision.MaximumFiveScaleValue)
         {
             throw new ArgumentOutOfRangeException(
                 nameof(price),
@@ -77,27 +127,6 @@ public sealed class Product : AuditableEntity<long>, IAggregateRoot
         Barcode = normalizedBarcode;
         Name = normalizedName;
         MeasurementUnitId = measurementUnitId;
-        Price = price;
-        IsActive = true;
+        Price = normalizedPrice;
     }
-
-    public string Code { get; private set; } = string.Empty;
-
-    public string? Barcode { get; private set; }
-
-    public string Name { get; private set; } = string.Empty;
-
-    public int MeasurementUnitId { get; private set; }
-
-    public decimal Price { get; private set; }
-
-    public bool IsActive { get; private set; }
-
-    public static Product Create(
-        string code,
-        string? barcode,
-        string name,
-        int measurementUnitId,
-        decimal price)
-        => new(code, barcode, name, measurementUnitId, price);
 }

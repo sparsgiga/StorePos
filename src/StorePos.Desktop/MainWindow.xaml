@@ -5,6 +5,8 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:historyViews="clr-namespace:StorePos.Desktop.History.Views"
         xmlns:historyViewModels="clr-namespace:StorePos.Desktop.History.ViewModels"
+        xmlns:productViews="clr-namespace:StorePos.Desktop.Products.Views"
+        xmlns:productViewModels="clr-namespace:StorePos.Desktop.Products.ViewModels"
         xmlns:salesViews="clr-namespace:StorePos.Desktop.Sales.Views"
         xmlns:salesViewModels="clr-namespace:StorePos.Desktop.Sales.ViewModels"
         mc:Ignorable="d"
@@ -28,6 +30,9 @@
         <DataTemplate DataType="{x:Type historyViewModels:SoldProductsViewModel}">
             <historyViews:SoldProductsView />
         </DataTemplate>
+        <DataTemplate DataType="{x:Type productViewModels:ProductsViewModel}">
+            <productViews:ProductsView />
+        </DataTemplate>
     </Window.Resources>
 
     <Grid Background="#F4F5F7">
@@ -40,6 +45,8 @@
             <StackPanel Orientation="Horizontal">
                 <Button MinWidth="115" Margin="0,0,8,0" Padding="12,6"
                         Command="{Binding ShowSalesCommand}" Content="გაყიდვები" />
+                <Button MinWidth="115" Margin="0,0,8,0" Padding="12,6"
+                        Command="{Binding ShowProductsCommand}" Content="პროდუქტები" />
                 <Button MinWidth="170" Margin="0,0,8,0" Padding="12,6"
                         Command="{Binding ShowHistoryCommand}" Content="გაყიდვების ისტორია" />
                 <Button MinWidth="170" Padding="12,6"

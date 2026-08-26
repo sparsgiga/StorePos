@@ -52,4 +52,13 @@ public sealed class SaleRepository(StorePosDbContext context)
             .SingleOrDefaultAsync(
                 sale => sale.Id == saleId && sale.Status == SaleStatus.Completed,
                 cancellationToken);
+
+    public Task<Sale?> GetByDebtPaymentOperationIdAsync(
+        Guid operationId,
+        CancellationToken cancellationToken = default)
+        => Entities
+            .Include(sale => sale.Payments)
+            .SingleOrDefaultAsync(
+                sale => sale.Payments.Any(payment => payment.OperationId == operationId),
+                cancellationToken);
 }

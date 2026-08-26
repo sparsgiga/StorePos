@@ -22,12 +22,17 @@ public sealed class SalePaymentConfiguration : IEntityTypeConfiguration<SalePaym
             .IsRequired();
 
         builder.Property(x => x.Amount)
-            .HasPrecision(18, 5)
+            .HasPrecision(18, 2)
             .IsRequired();
+
+        builder.Property(x => x.OperationId);
 
         builder.Property(x => x.DateCreated).HasColumnType("datetime2").IsRequired();
         builder.Property(x => x.DateUpdated).HasColumnType("datetime2");
 
         builder.HasIndex(x => x.SaleId);
+        builder.HasIndex(x => x.OperationId)
+            .IsUnique()
+            .HasFilter("[OperationId] IS NOT NULL");
     }
 }

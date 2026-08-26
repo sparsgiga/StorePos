@@ -35,6 +35,31 @@ public interface IStorePosApiClient
     Task<ProductCreationDefaultsDto> GetProductCreationDefaultsAsync(
         CancellationToken cancellationToken = default);
 
+    Task<PagedResultDto<ProductListItemDto>> GetProductsAsync(
+        ProductListFilter filter,
+        CancellationToken cancellationToken = default);
+
+    Task<ProductDetailsDto> GetProductAsync(
+        long productId,
+        CancellationToken cancellationToken = default);
+
+    Task<ProductMutationDto> CreateProductAsync(
+        SaveProductRequest request,
+        CancellationToken cancellationToken = default);
+
+    Task<ProductMutationDto> UpdateProductAsync(
+        long productId,
+        SaveProductRequest request,
+        CancellationToken cancellationToken = default);
+
+    Task<ProductMutationDto> DeactivateProductAsync(
+        long productId,
+        CancellationToken cancellationToken = default);
+
+    Task<ProductMutationDto> ActivateProductAsync(
+        long productId,
+        CancellationToken cancellationToken = default);
+
     Task<AddProductSaleItemResponse> AddProductSaleItemAsync(
         long saleId,
         AddProductSaleItemRequest request,

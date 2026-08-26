@@ -10,5 +10,5 @@ public sealed record CompleteSaleRequest(
 public sealed record CompleteSalePaymentRequest(
     [EnumDataType(typeof(PaymentType))]
     PaymentType PaymentType,
-    [Range(typeof(decimal), "0.00001", "9999999999999.99999")]
+    [Range(typeof(decimal), "0.00001", "9999999999999999.99")]
     decimal Amount);

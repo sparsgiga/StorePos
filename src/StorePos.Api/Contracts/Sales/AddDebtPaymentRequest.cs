@@ -4,7 +4,8 @@ using StorePos.Domain.Enums;
 namespace StorePos.Api.Contracts.Sales;
 
 public sealed record AddDebtPaymentRequest(
+    Guid OperationId,
     [EnumDataType(typeof(PaymentType))]
     PaymentType PaymentType,
-    [Range(typeof(decimal), "0.00001", "9999999999999.99999")]
+    [Range(typeof(decimal), "0.00001", "9999999999999999.99")]
     decimal Amount);

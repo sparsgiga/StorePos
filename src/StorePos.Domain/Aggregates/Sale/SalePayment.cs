@@ -1,12 +1,11 @@
 using StorePos.Domain.Base;
+using StorePos.Domain.Common;
 using StorePos.Domain.Enums;
 
 namespace StorePos.Domain.Aggregates.Sale;
 
 public sealed class SalePayment : AuditableEntity<long>
 {
-    internal const int AmountScale = 5;
-
     private SalePayment()
     {
     }
@@ -15,12 +14,14 @@ public sealed class SalePayment : AuditableEntity<long>
         long saleId,
         PaymentType paymentType,
         SalePaymentKind paymentKind,
-        decimal amount)
+        decimal amount,
+        Guid? operationId)
     {
         SaleId = saleId;
         PaymentType = paymentType;
         PaymentKind = paymentKind;
         Amount = amount;
+        OperationId = operationId;
     }
 
     public long SaleId { get; private set; }
@@ -31,11 +32,39 @@ public sealed class SalePayment : AuditableEntity<long>
 
     public decimal Amount { get; private set; }
 
-    internal static SalePayment Create(
+    public Guid? OperationId { get; private set; }
+
+    internal static SalePayment CreateCompletion(
+        long saleId,
+        PaymentType paymentType,
+        decimal amount)
+        => Create(saleId, paymentType, SalePaymentKind.Completion, amount, null);
+
+    internal static SalePayment CreateDebtRepayment(
+        long saleId,
+        PaymentType paymentType,
+        decimal amount,
+        Guid operationId)
+    {
+        if (operationId == Guid.Empty)
+        {
+            throw new ArgumentException("Operation ID is required.", nameof(operationId));
+        }
+
+        return Create(
+            saleId,
+            paymentType,
+            SalePaymentKind.DebtRepayment,
+            amount,
+            operationId);
+    }
+
+    private static SalePayment Create(
         long saleId,
         PaymentType paymentType,
         SalePaymentKind paymentKind,
-        decimal amount)
+        decimal amount,
+        Guid? operationId)
     {
         if (!Enum.IsDefined(paymentType))
         {
@@ -59,9 +88,9 @@ public sealed class SalePayment : AuditableEntity<long>
                 "Payment amount must be greater than zero.");
         }
 
-        return new SalePayment(saleId, paymentType, paymentKind, roundedAmount);
+        return new SalePayment(saleId, paymentType, paymentKind, roundedAmount, operationId);
     }
 
     public static decimal RoundAmount(decimal amount)
-        => decimal.Round(amount, AmountScale, MidpointRounding.AwayFromZero);
+        => FinancialPrecision.RoundMoney(amount);
 }

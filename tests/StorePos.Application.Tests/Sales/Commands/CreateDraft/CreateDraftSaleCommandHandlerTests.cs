@@ -74,6 +74,11 @@ public sealed class CreateDraftSaleCommandHandlerTests
             CancellationToken cancellationToken = default)
             => Task.FromResult<Sale?>(null);
 
+        public Task<Sale?> GetByDebtPaymentOperationIdAsync(
+            Guid operationId,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult<Sale?>(null);
+
         public Task<Sale?> GetByIdAsync(
             long id,
             CancellationToken cancellationToken = default)

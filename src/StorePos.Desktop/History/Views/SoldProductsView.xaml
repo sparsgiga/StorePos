@@ -70,7 +70,7 @@
                 <DataGridTextColumn Width="*" MinWidth="190" Header="პროდუქტი" Binding="{Binding ProductName}" />
                 <DataGridTextColumn Width="90" Header="რაოდენობა" Binding="{Binding Quantity, StringFormat={}{0:N5}}" />
                 <DataGridTextColumn Width="90" Header="ფასი" Binding="{Binding UnitPrice, StringFormat={}{0:N5}}" />
-                <DataGridTextColumn Width="100" Header="ჯამი" Binding="{Binding LineTotal, StringFormat={}{0:N5}}" />
+                <DataGridTextColumn Width="100" Header="ჯამი" Binding="{Binding LineTotal, StringFormat={}{0:N2}}" />
                 <DataGridTextColumn Width="*" MinWidth="140" Header="მყიდველი" Binding="{Binding CustomerName}" />
                 <DataGridTextColumn Width="85" Header="ტიპი" Binding="{Binding SourceName}" />
             </DataGrid.Columns>

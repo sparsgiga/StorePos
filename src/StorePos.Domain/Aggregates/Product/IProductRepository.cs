@@ -17,4 +17,14 @@ public interface IProductRepository :
     Task<Product?> GetByCodeAsync(
         string code,
         CancellationToken cancellationToken = default);
+
+    Task<bool> CodeExistsAsync(
+        string code,
+        long? excludingProductId = null,
+        CancellationToken cancellationToken = default);
+
+    Task<bool> BarcodeExistsAsync(
+        string barcode,
+        long? excludingProductId = null,
+        CancellationToken cancellationToken = default);
 }

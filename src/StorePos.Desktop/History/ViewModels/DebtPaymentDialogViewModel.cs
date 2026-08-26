@@ -13,6 +13,7 @@ public sealed class DebtPaymentDialogViewModel : ObservableObject
     private readonly IStorePosApiClient _apiClient;
     private readonly long _saleId;
     private readonly CancellationToken _cancellationToken;
+    private readonly Guid _operationId = Guid.NewGuid();
     private readonly AsyncRelayCommand _payCommand;
     private string? _amount;
     private PaymentTypeOption _selectedPaymentType;
@@ -87,7 +88,7 @@ public sealed class DebtPaymentDialogViewModel : ObservableObject
     private bool CanPay()
         => DecimalInputParser.TryParse(Amount, out var amount) &&
            amount > 0 &&
-           decimal.Round(amount, 5, MidpointRounding.AwayFromZero) <= OutstandingAmount;
+           FinancialInputPrecision.RoundMoney(amount) <= OutstandingAmount;
 
     private async Task PayAsync()
     {
@@ -97,7 +98,7 @@ public sealed class DebtPaymentDialogViewModel : ObservableObject
             return;
         }
 
-        amount = decimal.Round(amount, 5, MidpointRounding.AwayFromZero);
+        amount = FinancialInputPrecision.RoundMoney(amount);
         if (amount <= 0 || amount > OutstandingAmount)
         {
             ErrorMessage = "თანხა უნდა იყოს ნულზე მეტი და არ აღემატებოდეს დარჩენილ ვალს.";
@@ -109,7 +110,7 @@ public sealed class DebtPaymentDialogViewModel : ObservableObject
             ErrorMessage = null;
             Result = await _apiClient.AddDebtPaymentAsync(
                 _saleId,
-                new AddDebtPaymentRequest(SelectedPaymentType.Value, amount),
+                new AddDebtPaymentRequest(_operationId, SelectedPaymentType.Value, amount),
                 _cancellationToken);
             CloseRequested?.Invoke(this, new DialogCloseRequestedEventArgs(true));
         }

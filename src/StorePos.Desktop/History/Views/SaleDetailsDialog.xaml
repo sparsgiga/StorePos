@@ -111,7 +111,7 @@
                         <DataGridTextColumn Width="90" Header="ერთეული" Binding="{Binding UnitName}" />
                         <DataGridTextColumn Width="100" Header="რაოდენობა" Binding="{Binding Quantity, StringFormat={}{0:N5}}" />
                         <DataGridTextColumn Width="100" Header="ფასი" Binding="{Binding UnitPrice, StringFormat={}{0:N5}}" />
-                        <DataGridTextColumn Width="105" Header="ჯამი" Binding="{Binding LineTotal, StringFormat={}{0:N5}}" />
+                        <DataGridTextColumn Width="105" Header="ჯამი" Binding="{Binding LineTotal, StringFormat={}{0:N2}}" />
                         <DataGridTextColumn Width="85" Header="ტიპი" Binding="{Binding SourceName}" />
                         <DataGridTextColumn Width="160" Header="კომენტარი" Binding="{Binding Comment}" />
                     </DataGrid.Columns>

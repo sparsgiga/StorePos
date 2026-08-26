@@ -1,6 +1,9 @@
 namespace StorePos.Desktop.History.Models;
 
-public sealed record AddDebtPaymentRequest(int PaymentType, decimal Amount);
+public sealed record AddDebtPaymentRequest(
+    Guid OperationId,
+    int PaymentType,
+    decimal Amount);
 
 public sealed record AddDebtPaymentResponse(
     long SaleId,

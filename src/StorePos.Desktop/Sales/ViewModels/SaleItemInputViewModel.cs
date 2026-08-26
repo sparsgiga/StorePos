@@ -420,9 +420,11 @@ public sealed class SaleItemInputViewModel : ObservableObject
             {
                 case ManualItemField.Quantity:
                     Quantity = formattedValue;
+                    LineTotal = DecimalInputParser.Format(calculation.LineTotal);
                     break;
                 case ManualItemField.UnitPrice:
                     UnitPrice = formattedValue;
+                    LineTotal = DecimalInputParser.Format(calculation.LineTotal);
                     break;
                 case ManualItemField.LineTotal:
                     LineTotal = formattedValue;

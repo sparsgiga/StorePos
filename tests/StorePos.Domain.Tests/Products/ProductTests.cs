@@ -42,4 +42,43 @@ public sealed class ProductTests
     public void Create_NonnumericCode_Throws(string code)
         => Assert.Throws<ArgumentException>(() =>
             Product.Create(code, null, "Product", 1, 1m));
+
+    [Fact]
+    public void UpdateDetails_NormalizesAllFieldsAndPrice()
+    {
+        var product = Product.Create("100", "111", "Old", 1, 1m);
+
+        product.UpdateDetails(" 200 ", " 222 ", " New ", 2, 12.665656m);
+
+        Assert.Equal("200", product.Code);
+        Assert.Equal("222", product.Barcode);
+        Assert.Equal("New", product.Name);
+        Assert.Equal(2, product.MeasurementUnitId);
+        Assert.Equal(12.66566m, product.Price);
+    }
+
+    [Fact]
+    public void UpdateDetails_RequiresBarcode()
+    {
+        var product = Product.Create("100", null, "Legacy", 1, 1m);
+
+        Assert.Throws<ArgumentException>(() =>
+            product.UpdateDetails("100", " ", "Legacy", 1, 1m));
+    }
+
+    [Fact]
+    public void ActivateAndDeactivate_ControlStatus()
+    {
+        var product = Product.Create("100", "111", "Product", 1, 1m);
+
+        product.Deactivate();
+        Assert.False(product.IsActive);
+        product.Activate();
+        Assert.True(product.IsActive);
+    }
+
+    [Fact]
+    public void Create_PriceThatRoundsToZeroIsRejected()
+        => Assert.Throws<ArgumentOutOfRangeException>(() =>
+            Product.Create("100", "111", "Product", 1, 0.000001m));
 }

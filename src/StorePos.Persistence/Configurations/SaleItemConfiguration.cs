@@ -41,7 +41,7 @@ public sealed class SaleItemConfiguration : IEntityTypeConfiguration<SaleItem>
             .IsRequired();
 
         builder.Property(x => x.LineTotal)
-            .HasPrecision(18, 5)
+            .HasPrecision(18, 2)
             .IsRequired();
 
         builder.Property(x => x.IsManual).IsRequired();
