@@ -71,9 +71,13 @@ public sealed class SalesHistoryReadWorkflowTests
         Assert.All(byCustomer.Items, sale => Assert.Contains("ნინო", sale.CustomerName));
         var cancelledSale = Assert.Single(cancelled.Items);
         Assert.Equal(SaleStatus.Cancelled, cancelledSale.Status);
+        Assert.Equal(0m, cancelledSale.CashAmount);
+        Assert.Equal(0m, cancelledSale.PaidAmount);
         Assert.Equal(0m, cancelledSale.OutstandingAmount);
         Assert.False(cancelledSale.HasDebt);
         var draftSale = Assert.Single(drafts.Items);
+        Assert.Equal(0m, draftSale.CashAmount);
+        Assert.Equal(0m, draftSale.PaidAmount);
         Assert.Equal(0m, draftSale.OutstandingAmount);
         Assert.False(draftSale.HasDebt);
     }
@@ -105,6 +109,48 @@ public sealed class SalesHistoryReadWorkflowTests
                 Assert.Equal(PaymentType.Card, payment.PaymentType);
                 Assert.Equal(6m, payment.Amount);
             });
+    }
+
+    [Fact]
+    public async Task HistoryAndDetails_UseOnlyCurrentCompletionVersionAndKeepPreviousPayments()
+    {
+        await using var context = CreateContext();
+        var sale = Sale.Create("20260825-0090");
+        await context.Sales.AddAsync(sale);
+        await context.SaveChangesAsync();
+        var item = sale.AddManualItem("Item", 1m, 100m);
+        sale.Complete(
+            [new SalePaymentAllocation(PaymentType.Cash, 100m)],
+            new DateTime(2026, 8, 25, 10, 0, 0));
+        await context.SaveChangesAsync();
+        sale.Reopen();
+        sale.UpdateItem(item.Id, item.ProductName, 1m, 120m);
+        sale.Complete(
+            [
+                new SalePaymentAllocation(PaymentType.Cash, 50m),
+                new SalePaymentAllocation(PaymentType.Card, 70m)
+            ],
+            new DateTime(2026, 8, 25, 11, 0, 0));
+        await context.SaveChangesAsync();
+        context.ChangeTracker.Clear();
+
+        var readService = new SalesReadService(context);
+        var history = await readService.GetHistoryAsync(
+            new GetSalesHistoryQuery(SaleNumber: sale.SaleNumber),
+            CancellationToken.None);
+        var historySale = Assert.Single(history.Items);
+        Assert.Equal(50m, historySale.CashAmount);
+        Assert.Equal(70m, historySale.CardAmount);
+        Assert.Equal(120m, historySale.PaidAmount);
+        Assert.Equal(0m, historySale.OutstandingAmount);
+
+        var details = await readService.GetDetailsAsync(sale.Id);
+        Assert.NotNull(details);
+        Assert.Equal(2, details.CompletionVersion);
+        Assert.Equal(120m, details.PaidAmount);
+        Assert.Equal(3, details.Payments.Count);
+        Assert.Single(details.Payments, payment => payment.CompletionVersion == 1);
+        Assert.Equal(2, details.Payments.Count(payment => payment.CompletionVersion == 2));
     }
 
     private static async Task<SeededHistory> SeedAsync(StorePosDbContext context)

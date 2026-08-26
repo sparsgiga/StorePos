@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using StorePos.Desktop.Common;
+using StorePos.Desktop.Sales.Models;
 
 namespace StorePos.Desktop.Sales.ViewModels;
 
@@ -10,6 +11,8 @@ public sealed class SaleTabViewModel : ObservableObject
     private string? _customerName;
     private string? _customerIdentificationNumber;
     private string? _comment;
+    private int _completionVersion;
+    private PreviousCompletionPaymentStateDto? _previousCompletionPaymentState;
 
     public SaleTabViewModel(
         long id,
@@ -71,6 +74,18 @@ public sealed class SaleTabViewModel : ObservableObject
 
     public bool IsDetailsLoaded { get; private set; }
 
+    public int CompletionVersion
+    {
+        get => _completionVersion;
+        private set => SetProperty(ref _completionVersion, value);
+    }
+
+    public PreviousCompletionPaymentStateDto? PreviousCompletionPaymentState
+    {
+        get => _previousCompletionPaymentState;
+        private set => SetProperty(ref _previousCompletionPaymentState, value);
+    }
+
     public ObservableCollection<SaleItemViewModel> Items { get; } = [];
 
     public void ApplyDetails(
@@ -79,7 +94,9 @@ public sealed class SaleTabViewModel : ObservableObject
         string? customerName,
         string? customerIdentificationNumber,
         string? comment,
-        IEnumerable<SaleItemViewModel> items)
+        IEnumerable<SaleItemViewModel> items,
+        int completionVersion,
+        PreviousCompletionPaymentStateDto? previousCompletionPaymentState)
     {
         Items.Clear();
         foreach (var item in items)
@@ -92,6 +109,8 @@ public sealed class SaleTabViewModel : ObservableObject
         CustomerName = customerName;
         CustomerIdentificationNumber = customerIdentificationNumber;
         Comment = comment;
+        CompletionVersion = completionVersion;
+        PreviousCompletionPaymentState = previousCompletionPaymentState;
         IsDetailsLoaded = true;
     }
 

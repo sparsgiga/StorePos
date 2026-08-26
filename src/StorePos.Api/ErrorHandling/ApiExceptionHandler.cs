@@ -45,6 +45,12 @@ public sealed class ApiExceptionHandler(ILogger<ApiExceptionHandler> logger)
                 Title = "Sale operation conflict",
                 Detail = conflict.Message
             },
+            PersistenceConcurrencyException conflict => new ProblemDetails
+            {
+                Status = StatusCodes.Status409Conflict,
+                Title = "Concurrent update conflict",
+                Detail = "ჩანაწერი შენახვისას შეიცვალა. განაახლეთ მონაცემები და სცადეთ თავიდან."
+            },
             ValidationException validation => new ValidationProblemDetails(
                 validation.Errors
                     .GroupBy(error => error.PropertyName)

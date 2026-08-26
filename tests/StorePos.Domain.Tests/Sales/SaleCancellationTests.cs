@@ -43,4 +43,25 @@ public sealed class SaleCancellationTests
         Assert.Throws<InvalidOperationException>(() =>
             sale.Cancel(CancellationDate.AddMinutes(1)));
     }
+
+    [Fact]
+    public void Cancel_ReopenedSale_PreservesHistoricalPaymentsAndReportsNoCurrentMoney()
+    {
+        var sale = Sale.Create("20260825-0002");
+        sale.AddManualItem("Item", 1m, 10m);
+        sale.Complete(
+            [new SalePaymentAllocation(PaymentType.Cash, 10m)],
+            CancellationDate.AddMinutes(-2));
+        var payment = Assert.Single(sale.Payments);
+
+        sale.Reopen();
+        sale.Cancel(CancellationDate);
+
+        Assert.Equal(SaleStatus.Cancelled, sale.Status);
+        Assert.Equal(1, sale.CompletionVersion);
+        Assert.Same(payment, Assert.Single(sale.Payments));
+        Assert.Equal(0m, sale.PaidAmount);
+        Assert.Equal(0m, sale.OutstandingAmount);
+        Assert.False(sale.HasDebt);
+    }
 }

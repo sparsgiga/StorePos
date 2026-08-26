@@ -118,19 +118,34 @@
                 </DataGrid>
             </TabItem>
             <TabItem Header="გადახდები">
-                <DataGrid ItemsSource="{Binding Payments}"
-                          AutoGenerateColumns="False"
-                          CanUserAddRows="False"
-                          IsReadOnly="True"
-                          RowHeight="30">
-                    <DataGrid.Columns>
-                        <DataGridTextColumn Width="150" Header="თარიღი"
-                                            Binding="{Binding DateCreated, StringFormat={}{0:dd.MM.yyyy HH:mm}}" />
-                        <DataGridTextColumn Width="*" Header="გადახდის ტიპი" Binding="{Binding PaymentTypeName}" />
-                        <DataGridTextColumn Width="150" Header="დანიშნულება" Binding="{Binding PaymentKindName}" />
-                        <DataGridTextColumn Width="130" Header="თანხა" Binding="{Binding Amount, StringFormat={}{0:N5}}" />
-                    </DataGrid.Columns>
-                </DataGrid>
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <ItemsControl ItemsSource="{Binding PaymentGroups}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Margin="8,8,8,12">
+                                    <TextBlock Margin="0,0,0,6"
+                                               FontSize="15"
+                                               FontWeight="SemiBold"
+                                               Text="{Binding Header}" />
+                                    <DataGrid ItemsSource="{Binding Payments}"
+                                              AutoGenerateColumns="False"
+                                              CanUserAddRows="False"
+                                              IsReadOnly="True"
+                                              RowHeight="30"
+                                              HeadersVisibility="Column">
+                                        <DataGrid.Columns>
+                                            <DataGridTextColumn Width="150" Header="თარიღი"
+                                                                Binding="{Binding DateCreated, StringFormat={}{0:dd.MM.yyyy HH:mm}}" />
+                                            <DataGridTextColumn Width="*" Header="გადახდის ტიპი" Binding="{Binding PaymentTypeName}" />
+                                            <DataGridTextColumn Width="150" Header="დანიშნულება" Binding="{Binding PaymentKindName}" />
+                                            <DataGridTextColumn Width="130" Header="თანხა" Binding="{Binding Amount, StringFormat={}{0:N2}}" />
+                                        </DataGrid.Columns>
+                                    </DataGrid>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
             </TabItem>
         </TabControl>
 

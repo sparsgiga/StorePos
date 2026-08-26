@@ -1,4 +1,5 @@
 using MediatR;
+using StorePos.Application.Common.Exceptions;
 using StorePos.Domain.Aggregates.Sale;
 using StorePos.Domain.Interfaces;
 
@@ -25,8 +26,21 @@ public sealed class CancelSaleCommandHandler(
             return null;
         }
 
-        sale.Cancel(timeProvider.GetLocalNow().DateTime);
-        await unitOfWork.SaveChangesAsync(cancellationToken);
+        try
+        {
+            sale.Cancel(timeProvider.GetLocalNow().DateTime);
+            await unitOfWork.SaveChangesAsync(cancellationToken);
+        }
+        catch (InvalidOperationException exception)
+        {
+            throw new SaleOperationConflictException(exception.Message, exception);
+        }
+        catch (PersistenceConcurrencyException exception)
+        {
+            throw new SaleOperationConflictException(
+                "გაყიდვის ფინანსური მდგომარეობა შეიცვალა. განაახლეთ მონაცემები და სცადეთ თავიდან.",
+                exception);
+        }
 
         return new CancelSaleResult(
             sale.Id,

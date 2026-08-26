@@ -4,6 +4,7 @@ public sealed record SaleDetailsDto(
     long Id,
     string SaleNumber,
     int Status,
+    int CompletionVersion,
     long? CustomerId,
     string? CustomerName,
     string? CustomerIdentificationNumber,
@@ -45,6 +46,7 @@ public sealed record SaleDetailsItemDto(
 }
 
 public sealed record SaleDetailsPaymentDto(
+    int CompletionVersion,
     int PaymentType,
     int PaymentKind,
     decimal Amount,

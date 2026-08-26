@@ -33,7 +33,16 @@ public sealed class ReopenSaleCommandHandler(
         {
             throw new SaleOperationConflictException(exception.Message, exception);
         }
-        await unitOfWork.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await unitOfWork.SaveChangesAsync(cancellationToken);
+        }
+        catch (PersistenceConcurrencyException exception)
+        {
+            throw new SaleOperationConflictException(
+                "გაყიდვის ფინანსური მდგომარეობა შეიცვალა. განაახლეთ მონაცემები და სცადეთ თავიდან.",
+                exception);
+        }
 
         return new ReopenSaleResult(
             sale.Id,

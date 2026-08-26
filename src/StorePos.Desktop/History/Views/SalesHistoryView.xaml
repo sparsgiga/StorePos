@@ -76,7 +76,7 @@
                 <Style TargetType="DataGridRow">
                     <Style.Triggers>
                         <DataTrigger Binding="{Binding HasDebt}" Value="True">
-                            <Setter Property="Background" Value="#FFF0F0" />
+                            <Setter Property="Background" Value="#d18e8e" />
                         </DataTrigger>
                     </Style.Triggers>
                 </Style>

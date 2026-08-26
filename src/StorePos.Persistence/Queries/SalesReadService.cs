@@ -59,6 +59,16 @@ public sealed class SalesReadService(StorePosDbContext context) : ISalesReadServ
                         : sale.DateCreated) < dateToExclusive.Value);
         }
 
+        if (await query.AnyAsync(
+                sale => sale.Payments.Any(payment =>
+                    payment.CompletionVersion <= 0 ||
+                    payment.CompletionVersion > sale.CompletionVersion),
+                cancellationToken))
+        {
+            throw new InvalidOperationException(
+                "A sale contains an invalid payment completion version.");
+        }
+
         var totalCount = await query.CountAsync(cancellationToken);
         var items = await query
             .OrderByDescending(sale =>
@@ -86,25 +96,48 @@ public sealed class SalesReadService(StorePosDbContext context) : ISalesReadServ
                         ? sale.DateCancelled ?? sale.DateCreated
                         : sale.DateCreated,
                 sale.Payments
-                    .Where(payment => payment.PaymentType == PaymentType.Cash)
+                    .Where(payment =>
+                        sale.Status == SaleStatus.Completed &&
+                        payment.CompletionVersion == sale.CompletionVersion &&
+                        payment.PaymentType == PaymentType.Cash)
                     .Sum(payment => (decimal?)payment.Amount) ?? 0m,
                 sale.Payments
-                    .Where(payment => payment.PaymentType == PaymentType.Card)
+                    .Where(payment =>
+                        sale.Status == SaleStatus.Completed &&
+                        payment.CompletionVersion == sale.CompletionVersion &&
+                        payment.PaymentType == PaymentType.Card)
                     .Sum(payment => (decimal?)payment.Amount) ?? 0m,
                 sale.Payments
-                    .Where(payment => payment.PaymentType == PaymentType.BankTransfer)
+                    .Where(payment =>
+                        sale.Status == SaleStatus.Completed &&
+                        payment.CompletionVersion == sale.CompletionVersion &&
+                        payment.PaymentType == PaymentType.BankTransfer)
                     .Sum(payment => (decimal?)payment.Amount) ?? 0m,
                 sale.Payments
-                    .Where(payment => payment.PaymentType == PaymentType.Other)
+                    .Where(payment =>
+                        sale.Status == SaleStatus.Completed &&
+                        payment.CompletionVersion == sale.CompletionVersion &&
+                        payment.PaymentType == PaymentType.Other)
                     .Sum(payment => (decimal?)payment.Amount) ?? 0m,
-                sale.Payments.Sum(payment => (decimal?)payment.Amount) ?? 0m,
+                sale.Status == SaleStatus.Completed
+                    ? sale.Payments
+                        .Where(payment =>
+                            payment.CompletionVersion == sale.CompletionVersion)
+                        .Sum(payment => (decimal?)payment.Amount) ?? 0m
+                    : 0m,
                 sale.Status == SaleStatus.Completed
                     ? sale.TotalAmount -
-                        (sale.Payments.Sum(payment => (decimal?)payment.Amount) ?? 0m)
+                        (sale.Payments
+                            .Where(payment =>
+                                payment.CompletionVersion == sale.CompletionVersion)
+                            .Sum(payment => (decimal?)payment.Amount) ?? 0m)
                     : 0m,
                 sale.Status == SaleStatus.Completed &&
                     sale.TotalAmount -
-                    (sale.Payments.Sum(payment => (decimal?)payment.Amount) ?? 0m) > 0m))
+                    (sale.Payments
+                        .Where(payment =>
+                            payment.CompletionVersion == sale.CompletionVersion)
+                        .Sum(payment => (decimal?)payment.Amount) ?? 0m) > 0m))
             .ToArrayAsync(cancellationToken);
 
         return new PagedResult<SalesHistoryItemModel>(
@@ -211,6 +244,7 @@ public sealed class SalesReadService(StorePosDbContext context) : ISalesReadServ
                 currentSale.Id,
                 currentSale.SaleNumber,
                 currentSale.Status,
+                currentSale.CompletionVersion,
                 currentSale.CustomerId,
                 currentSale.CustomerName,
                 currentSale.CustomerIdentificationNumber,
@@ -252,14 +286,27 @@ public sealed class SalesReadService(StorePosDbContext context) : ISalesReadServ
             .OrderBy(payment => payment.DateCreated)
             .ThenBy(payment => payment.Id)
             .Select(payment => new SaleDetailsPaymentModel(
+                payment.CompletionVersion,
                 payment.PaymentType,
                 payment.PaymentKind,
                 payment.Amount,
                 payment.DateCreated))
             .ToArrayAsync(cancellationToken);
 
-        var paidAmount = SalePayment.RoundAmount(
-            payments.Sum(payment => payment.Amount));
+        if (payments.Any(payment =>
+                payment.CompletionVersion <= 0 ||
+                payment.CompletionVersion > sale.CompletionVersion))
+        {
+            throw new InvalidOperationException(
+                "The sale contains an invalid payment completion version.");
+        }
+
+        var paidAmount = sale.Status == SaleStatus.Completed
+            ? SalePayment.RoundAmount(payments
+                .Where(payment =>
+                    payment.CompletionVersion == sale.CompletionVersion)
+                .Sum(payment => payment.Amount))
+            : 0m;
         var outstandingAmount = sale.Status == SaleStatus.Completed
             ? SalePayment.RoundAmount(sale.TotalAmount - paidAmount)
             : 0m;
@@ -268,6 +315,7 @@ public sealed class SalesReadService(StorePosDbContext context) : ISalesReadServ
             sale.Id,
             sale.SaleNumber,
             sale.Status,
+            sale.CompletionVersion,
             sale.CustomerId,
             sale.CustomerName,
             sale.CustomerIdentificationNumber,

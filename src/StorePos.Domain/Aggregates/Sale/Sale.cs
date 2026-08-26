@@ -62,12 +62,15 @@ public sealed class Sale : AuditableEntity<long>, IAggregateRoot
 
     public long FinancialRevision { get; private set; }
 
+    public int CompletionVersion { get; private set; }
+
     public IReadOnlyCollection<SaleItem> Items => _items;
 
     public IReadOnlyCollection<SalePayment> Payments => _payments;
 
-    public decimal PaidAmount => FinancialPrecision.SumMoney(
-        _payments.Select(payment => payment.Amount));
+    public decimal PaidAmount => Status == SaleStatus.Completed
+        ? CalculateCurrentPaidAmount()
+        : 0m;
 
     public decimal OutstandingAmount => Status == SaleStatus.Completed
         ? FinancialPrecision.RoundMoney(TotalAmount - PaidAmount)
@@ -231,11 +234,15 @@ public sealed class Sale : AuditableEntity<long>, IAggregateRoot
                 "A sale must contain at least one item before it can be completed.");
         }
 
-        if (_payments.Count != 0)
+        EnsurePaymentVersionsAreValid();
+
+        if (_payments.Any(payment => payment.PaymentKind == SalePaymentKind.DebtRepayment))
         {
             throw new InvalidOperationException(
-                "A draft sale cannot contain existing payments.");
+                "A draft sale cannot contain a historical debt repayment.");
         }
+
+        var nextCompletionVersion = checked(CompletionVersion + 1);
 
         var allocations = payments.ToArray();
         foreach (var payment in allocations)
@@ -259,6 +266,7 @@ public sealed class Sale : AuditableEntity<long>, IAggregateRoot
             .Where(payment => SalePayment.RoundAmount(payment.Amount) > 0)
             .Select(payment => SalePayment.CreateCompletion(
                 Id,
+                nextCompletionVersion,
                 payment.PaymentType,
                 payment.Amount))
             .ToArray();
@@ -288,6 +296,7 @@ public sealed class Sale : AuditableEntity<long>, IAggregateRoot
         }
 
         _payments.AddRange(newPayments);
+        CompletionVersion = nextCompletionVersion;
         Status = SaleStatus.Completed;
         DateCompleted = dateCompleted;
         DateCancelled = null;
@@ -303,6 +312,8 @@ public sealed class Sale : AuditableEntity<long>, IAggregateRoot
             throw new InvalidOperationException(
                 "Debt payments can only be added to completed sales.");
         }
+
+        EnsurePaymentVersionsAreValid();
 
         if (operationId == Guid.Empty)
         {
@@ -332,6 +343,7 @@ public sealed class Sale : AuditableEntity<long>, IAggregateRoot
 
         var payment = SalePayment.CreateDebtRepayment(
             Id,
+            CompletionVersion,
             paymentType,
             amount,
             operationId);
@@ -350,12 +362,7 @@ public sealed class Sale : AuditableEntity<long>, IAggregateRoot
     public void Cancel(DateTime dateCancelled)
     {
         EnsureDraft();
-
-        if (_payments.Count != 0)
-        {
-            throw new InvalidOperationException(
-                "A draft sale with payments cannot be cancelled.");
-        }
+        EnsurePaymentVersionsAreValid();
 
         Status = SaleStatus.Cancelled;
         DateCompleted = null;
@@ -370,13 +377,14 @@ public sealed class Sale : AuditableEntity<long>, IAggregateRoot
                 "Only a completed sale can be reopened.");
         }
 
+        EnsurePaymentVersionsAreValid();
+
         if (_payments.Any(payment => payment.PaymentKind == SalePaymentKind.DebtRepayment))
         {
             throw new InvalidOperationException(
                 "This sale has a later debt repayment and can no longer be reopened.");
         }
 
-        _payments.Clear();
         Status = SaleStatus.Draft;
         DateCompleted = null;
         DateCancelled = null;
@@ -393,6 +401,39 @@ public sealed class Sale : AuditableEntity<long>, IAggregateRoot
     private void RecalculateTotal()
         => TotalAmount = FinancialPrecision.SumMoney(
             _items.Select(item => item.LineTotal));
+
+    private decimal CalculateCurrentPaidAmount()
+    {
+        EnsurePaymentVersionsAreValid();
+
+        return FinancialPrecision.SumMoney(
+            _payments
+                .Where(payment => payment.CompletionVersion == CompletionVersion)
+                .Select(payment => payment.Amount));
+    }
+
+    private void EnsurePaymentVersionsAreValid()
+    {
+        if (CompletionVersion < 0)
+        {
+            throw new InvalidOperationException(
+                "A sale completion version cannot be negative.");
+        }
+
+        if (Status == SaleStatus.Completed && CompletionVersion == 0)
+        {
+            throw new InvalidOperationException(
+                "A completed sale must have a completion version.");
+        }
+
+        if (_payments.Any(payment =>
+                payment.CompletionVersion <= 0 ||
+                payment.CompletionVersion > CompletionVersion))
+        {
+            throw new InvalidOperationException(
+                "The sale contains an invalid payment completion version.");
+        }
+    }
 
     private SaleItem GetItem(long saleItemId)
         => _items.SingleOrDefault(item => item.Id == saleItemId)

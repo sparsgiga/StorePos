@@ -6,6 +6,7 @@ public sealed record SaleDetailsModel(
     long Id,
     string SaleNumber,
     SaleStatus Status,
+    int CompletionVersion,
     long? CustomerId,
     string? CustomerName,
     string? CustomerIdentificationNumber,
@@ -35,6 +36,7 @@ public sealed record SaleDetailsItemModel(
     string? Comment);
 
 public sealed record SaleDetailsPaymentModel(
+    int CompletionVersion,
     PaymentType PaymentType,
     SalePaymentKind PaymentKind,
     decimal Amount,

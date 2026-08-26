@@ -40,6 +40,7 @@ public sealed class SaleRepository(StorePosDbContext context)
         => Entities
             .AsNoTracking()
             .Include(sale => sale.Items)
+            .Include(sale => sale.Payments)
             .SingleOrDefaultAsync(
                 sale => sale.Id == saleId && sale.Status == SaleStatus.Draft,
                 cancellationToken);

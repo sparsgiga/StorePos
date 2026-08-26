@@ -2,6 +2,7 @@ using MediatR;
 using StorePos.Application.Common.Exceptions;
 using StorePos.Domain.Aggregates.Sale;
 using StorePos.Domain.Common;
+using StorePos.Domain.Enums;
 using StorePos.Domain.Interfaces;
 
 namespace StorePos.Application.Sales.Commands.AddDebtPayment;
@@ -24,6 +25,8 @@ public sealed class AddDebtPaymentCommandHandler(
             var existingPayment = operationSale.Payments.Single(payment =>
                 payment.OperationId == request.OperationId);
             if (operationSale.Id != request.SaleId ||
+                operationSale.Status != SaleStatus.Completed ||
+                existingPayment.CompletionVersion != operationSale.CompletionVersion ||
                 existingPayment.PaymentType != request.PaymentType ||
                 existingPayment.Amount != normalizedAmount)
             {
@@ -77,6 +80,7 @@ public sealed class AddDebtPaymentCommandHandler(
             sale.OutstandingAmount,
             sale.HasDebt,
             new SaleDebtPaymentResult(
+                payment.CompletionVersion,
                 payment.PaymentType,
                 payment.PaymentKind,
                 payment.Amount,

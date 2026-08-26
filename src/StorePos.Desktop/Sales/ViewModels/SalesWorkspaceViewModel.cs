@@ -499,7 +499,9 @@ public sealed class SalesWorkspaceViewModel : ObservableObject, IDisposable
                 details.CustomerName,
                 details.CustomerIdentificationNumber,
                 details.Comment,
-                details.Items.Select(Map));
+                details.Items.Select(Map),
+                details.CompletionVersion,
+                details.PreviousCompletionPaymentState);
             ErrorMessage = null;
         }
         catch (OperationCanceledException) when (cancellation.IsCancellationRequested)

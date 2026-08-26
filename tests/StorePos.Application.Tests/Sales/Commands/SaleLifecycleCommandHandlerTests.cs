@@ -2,6 +2,7 @@ using StorePos.Application.Sales.Commands.Cancel;
 using StorePos.Application.Sales.Commands.Complete;
 using StorePos.Application.Sales.Commands.Reopen;
 using StorePos.Application.Sales.Commands.AddDebtPayment;
+using StorePos.Application.Common.Exceptions;
 using StorePos.Domain.Aggregates.Sale;
 using StorePos.Domain.Enums;
 using StorePos.Domain.Interfaces;
@@ -87,8 +88,50 @@ public sealed class SaleLifecycleCommandHandlerTests
 
         Assert.NotNull(result);
         Assert.Equal(SaleStatus.Draft, result.Status);
-        Assert.Empty(sale.Payments);
+        Assert.Single(sale.Payments);
+        Assert.Equal(1, sale.CompletionVersion);
         Assert.Equal(1, unitOfWork.SaveChangesCallCount);
+    }
+
+    [Fact]
+    public async Task CompleteReopenEditAndCompleteAgain_PreservesOldPaymentAndUsesNewVersion()
+    {
+        var sale = Sale.Create("20260825-0020");
+        var item = sale.AddManualItem("A", 1m, 100m);
+        var repository = new FakeSaleRepository(sale);
+        var unitOfWork = new FakeUnitOfWork();
+        var timeProvider = new FixedTimeProvider(FixedNow);
+
+        await new CompleteSaleCommandHandler(repository, unitOfWork, timeProvider)
+            .Handle(
+                new CompleteSaleCommand(
+                    1,
+                    [new CompleteSalePayment(PaymentType.Cash, 100m)]),
+                CancellationToken.None);
+        var oldPayment = Assert.Single(sale.Payments);
+        var oldAmount = oldPayment.Amount;
+
+        await new ReopenSaleCommandHandler(repository, unitOfWork)
+            .Handle(new ReopenSaleCommand(1), CancellationToken.None);
+        sale.UpdateItem(item.Id, item.ProductName, 1m, 120m);
+        var result = await new CompleteSaleCommandHandler(repository, unitOfWork, timeProvider)
+            .Handle(
+                new CompleteSaleCommand(
+                    1,
+                    [
+                        new CompleteSalePayment(PaymentType.Cash, 50m),
+                        new CompleteSalePayment(PaymentType.Card, 70m)
+                    ]),
+                CancellationToken.None);
+
+        Assert.NotNull(result);
+        Assert.Equal(2, sale.CompletionVersion);
+        Assert.Equal(3, sale.Payments.Count);
+        Assert.Same(oldPayment, sale.Payments.Single(payment =>
+            payment.CompletionVersion == 1));
+        Assert.Equal(oldAmount, oldPayment.Amount);
+        Assert.Equal(120m, result.PaidAmount);
+        Assert.Equal(0m, result.OutstandingAmount);
     }
 
     [Fact]
@@ -116,6 +159,26 @@ public sealed class SaleLifecycleCommandHandlerTests
         Assert.True(result.HasDebt);
         Assert.Equal(SalePaymentKind.DebtRepayment, result.Payment.PaymentKind);
         Assert.Equal(1, unitOfWork.SaveChangesCallCount);
+    }
+
+    [Fact]
+    public async Task CompleteHandler_MapsLostRowVersionRaceToSaleConflict()
+    {
+        var sale = Sale.Create("20260825-0030");
+        sale.AddManualItem("A", 1m, 10m);
+        var handler = new CompleteSaleCommandHandler(
+            new FakeSaleRepository(sale),
+            new FakeUnitOfWork(throwConcurrency: true),
+            new FixedTimeProvider(FixedNow));
+
+        var exception = await Assert.ThrowsAsync<SaleOperationConflictException>(() =>
+            handler.Handle(
+                new CompleteSaleCommand(
+                    1,
+                    [new CompleteSalePayment(PaymentType.Cash, 10m)]),
+                CancellationToken.None));
+
+        Assert.Contains("ფინანსური მდგომარეობა შეიცვალა", exception.Message);
     }
 
     private sealed class FakeSaleRepository(Sale? sale) : ISaleRepository
@@ -173,13 +236,18 @@ public sealed class SaleLifecycleCommandHandlerTests
         }
     }
 
-    private sealed class FakeUnitOfWork : IUnitOfWork
+    private sealed class FakeUnitOfWork(bool throwConcurrency = false) : IUnitOfWork
     {
         public int SaveChangesCallCount { get; private set; }
 
         public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         {
             SaveChangesCallCount++;
+            if (throwConcurrency)
+            {
+                throw new PersistenceConcurrencyException("Lost update.");
+            }
+
             return Task.FromResult(1);
         }
 

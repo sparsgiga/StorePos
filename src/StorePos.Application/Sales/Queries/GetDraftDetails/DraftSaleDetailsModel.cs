@@ -3,10 +3,19 @@ namespace StorePos.Application.Sales.Queries.GetDraftDetails;
 public sealed record DraftSaleDetailsModel(
     long Id,
     string SaleNumber,
+    int CompletionVersion,
     decimal TotalAmount,
     DateTime DateCreated,
     long? CustomerId,
     string? CustomerName,
     string? CustomerIdentificationNumber,
     string? Comment,
-    IReadOnlyList<DraftSaleItemModel> Items);
+    IReadOnlyList<DraftSaleItemModel> Items,
+    PreviousCompletionPaymentStateModel? PreviousCompletionPaymentState);
+
+public sealed record PreviousCompletionPaymentStateModel(
+    int CompletionVersion,
+    decimal CashAmount,
+    decimal CardAmount,
+    decimal BankTransferAmount,
+    decimal OtherAmount);

@@ -9,6 +9,17 @@ public sealed class SaleCompletionTests
         new(2026, 8, 25, 12, 30, 0, DateTimeKind.Utc);
 
     [Fact]
+    public void NewDraft_HasZeroCompletionVersionAndNoCurrentMoney()
+    {
+        var sale = Sale.Create("20260825-0000");
+
+        Assert.Equal(0, sale.CompletionVersion);
+        Assert.Equal(0m, sale.PaidAmount);
+        Assert.Equal(0m, sale.OutstandingAmount);
+        Assert.False(sale.HasDebt);
+    }
+
+    [Fact]
     public void Complete_DraftWithItemAndSinglePayment_CompletesSale()
     {
         var sale = CreateSaleWithTotal(272m);
@@ -18,11 +29,13 @@ public sealed class SaleCompletionTests
             CompletionDate);
 
         Assert.Equal(SaleStatus.Completed, sale.Status);
+        Assert.Equal(1, sale.CompletionVersion);
         Assert.Equal(CompletionDate, sale.DateCompleted);
         Assert.Null(sale.DateCancelled);
         var payment = Assert.Single(sale.Payments);
         Assert.Equal(PaymentType.Cash, payment.PaymentType);
         Assert.Equal(SalePaymentKind.Completion, payment.PaymentKind);
+        Assert.Equal(1, payment.CompletionVersion);
         Assert.Equal(272m, payment.Amount);
         Assert.Equal(272m, sale.PaidAmount);
         Assert.Equal(0m, sale.OutstandingAmount);
@@ -71,6 +84,7 @@ public sealed class SaleCompletionTests
         Assert.Equal(SaleStatus.Draft, sale.Status);
         Assert.Null(sale.DateCompleted);
         Assert.Empty(sale.Payments);
+        Assert.Equal(0, sale.CompletionVersion);
     }
 
     [Fact]
@@ -87,6 +101,7 @@ public sealed class SaleCompletionTests
 
         Assert.Equal(SaleStatus.Draft, sale.Status);
         Assert.Empty(sale.Payments);
+        Assert.Equal(0, sale.CompletionVersion);
     }
 
     [Fact]
@@ -129,6 +144,7 @@ public sealed class SaleCompletionTests
         Assert.Equal(200m, sale.OutstandingAmount);
         Assert.True(sale.HasDebt);
         Assert.Empty(sale.Payments);
+        Assert.Equal(1, sale.CompletionVersion);
     }
 
     [Theory]

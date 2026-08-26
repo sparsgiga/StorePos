@@ -14,12 +14,14 @@ public sealed class SaleDebtPaymentTests
 
         var first = sale.AddDebtPayment(Guid.NewGuid(), PaymentType.Cash, 60m);
         Assert.Equal(SalePaymentKind.DebtRepayment, first.PaymentKind);
+        Assert.Equal(sale.CompletionVersion, first.CompletionVersion);
         Assert.Equal(160m, sale.PaidAmount);
         Assert.Equal(40m, sale.OutstandingAmount);
         Assert.True(sale.HasDebt);
 
         var second = sale.AddDebtPayment(Guid.NewGuid(), PaymentType.Card, 40m);
         Assert.Equal(SalePaymentKind.DebtRepayment, second.PaymentKind);
+        Assert.Equal(sale.CompletionVersion, second.CompletionVersion);
         Assert.Equal(200m, sale.PaidAmount);
         Assert.Equal(0m, sale.OutstandingAmount);
         Assert.False(sale.HasDebt);

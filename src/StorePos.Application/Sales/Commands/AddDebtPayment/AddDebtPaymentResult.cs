@@ -11,6 +11,7 @@ public sealed record AddDebtPaymentResult(
     SaleDebtPaymentResult Payment);
 
 public sealed record SaleDebtPaymentResult(
+    int CompletionVersion,
     PaymentType PaymentType,
     SalePaymentKind PaymentKind,
     decimal Amount,

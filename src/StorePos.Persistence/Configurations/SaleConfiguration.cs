@@ -34,6 +34,7 @@ public sealed class SaleConfiguration : IEntityTypeConfiguration<Sale>
             .IsRequired();
 
         builder.Property(x => x.FinancialRevision).IsRequired();
+        builder.Property(x => x.CompletionVersion).IsRequired();
 
         builder.Property(x => x.Comment)
             .HasMaxLength(Sale.CommentMaxLength);

@@ -21,6 +21,8 @@ public sealed class SalePaymentConfiguration : IEntityTypeConfiguration<SalePaym
             .HasConversion<int>()
             .IsRequired();
 
+        builder.Property(x => x.CompletionVersion).IsRequired();
+
         builder.Property(x => x.Amount)
             .HasPrecision(18, 2)
             .IsRequired();
@@ -31,6 +33,7 @@ public sealed class SalePaymentConfiguration : IEntityTypeConfiguration<SalePaym
         builder.Property(x => x.DateUpdated).HasColumnType("datetime2");
 
         builder.HasIndex(x => x.SaleId);
+        builder.HasIndex(x => new { x.SaleId, x.CompletionVersion });
         builder.HasIndex(x => x.OperationId)
             .IsUnique()
             .HasFilter("[OperationId] IS NOT NULL");

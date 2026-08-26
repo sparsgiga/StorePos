@@ -12,12 +12,14 @@ public sealed class SalePayment : AuditableEntity<long>
 
     private SalePayment(
         long saleId,
+        int completionVersion,
         PaymentType paymentType,
         SalePaymentKind paymentKind,
         decimal amount,
         Guid? operationId)
     {
         SaleId = saleId;
+        CompletionVersion = completionVersion;
         PaymentType = paymentType;
         PaymentKind = paymentKind;
         Amount = amount;
@@ -25,6 +27,8 @@ public sealed class SalePayment : AuditableEntity<long>
     }
 
     public long SaleId { get; private set; }
+
+    public int CompletionVersion { get; private set; }
 
     public PaymentType PaymentType { get; private set; }
 
@@ -36,12 +40,20 @@ public sealed class SalePayment : AuditableEntity<long>
 
     internal static SalePayment CreateCompletion(
         long saleId,
+        int completionVersion,
         PaymentType paymentType,
         decimal amount)
-        => Create(saleId, paymentType, SalePaymentKind.Completion, amount, null);
+        => Create(
+            saleId,
+            completionVersion,
+            paymentType,
+            SalePaymentKind.Completion,
+            amount,
+            null);
 
     internal static SalePayment CreateDebtRepayment(
         long saleId,
+        int completionVersion,
         PaymentType paymentType,
         decimal amount,
         Guid operationId)
@@ -53,6 +65,7 @@ public sealed class SalePayment : AuditableEntity<long>
 
         return Create(
             saleId,
+            completionVersion,
             paymentType,
             SalePaymentKind.DebtRepayment,
             amount,
@@ -61,11 +74,19 @@ public sealed class SalePayment : AuditableEntity<long>
 
     private static SalePayment Create(
         long saleId,
+        int completionVersion,
         PaymentType paymentType,
         SalePaymentKind paymentKind,
         decimal amount,
         Guid? operationId)
     {
+        if (completionVersion <= 0)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(completionVersion),
+                "Completion version must be greater than zero.");
+        }
+
         if (!Enum.IsDefined(paymentType))
         {
             throw new ArgumentOutOfRangeException(
@@ -88,7 +109,13 @@ public sealed class SalePayment : AuditableEntity<long>
                 "Payment amount must be greater than zero.");
         }
 
-        return new SalePayment(saleId, paymentType, paymentKind, roundedAmount, operationId);
+        return new SalePayment(
+            saleId,
+            completionVersion,
+            paymentType,
+            paymentKind,
+            roundedAmount,
+            operationId);
     }
 
     public static decimal RoundAmount(decimal amount)

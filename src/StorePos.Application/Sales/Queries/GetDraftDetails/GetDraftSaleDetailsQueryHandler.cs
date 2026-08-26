@@ -1,5 +1,7 @@
 using MediatR;
 using StorePos.Domain.Aggregates.Sale;
+using StorePos.Domain.Common;
+using StorePos.Domain.Enums;
 
 namespace StorePos.Application.Sales.Queries.GetDraftDetails;
 
@@ -37,15 +39,42 @@ public sealed class GetDraftSaleDetailsQueryHandler(ISaleRepository saleReposito
                 item.Comment))
             .ToArray();
 
+        PreviousCompletionPaymentStateModel? previousPaymentState = null;
+        if (sale.CompletionVersion > 0)
+        {
+            var previousCompletionPayments = sale.Payments
+                .Where(payment =>
+                    payment.CompletionVersion == sale.CompletionVersion &&
+                    payment.PaymentKind == SalePaymentKind.Completion)
+                .ToArray();
+
+            previousPaymentState = new PreviousCompletionPaymentStateModel(
+                sale.CompletionVersion,
+                SumByType(previousCompletionPayments, PaymentType.Cash),
+                SumByType(previousCompletionPayments, PaymentType.Card),
+                SumByType(previousCompletionPayments, PaymentType.BankTransfer),
+                SumByType(previousCompletionPayments, PaymentType.Other));
+        }
+
         return new DraftSaleDetailsModel(
             sale.Id,
             sale.SaleNumber,
+            sale.CompletionVersion,
             sale.TotalAmount,
             sale.DateCreated,
             sale.CustomerId,
             sale.CustomerName,
             sale.CustomerIdentificationNumber,
             sale.Comment,
-            items);
+            items,
+            previousPaymentState);
     }
+
+    private static decimal SumByType(
+        IEnumerable<SalePayment> payments,
+        PaymentType paymentType)
+        => FinancialPrecision.SumMoney(
+            payments
+                .Where(payment => payment.PaymentType == paymentType)
+                .Select(payment => payment.Amount));
 }

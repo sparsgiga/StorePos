@@ -37,11 +37,37 @@ public sealed class SaleDetailsDialogViewModelTests
         Assert.Null(clipboard.Text);
     }
 
+    [Fact]
+    public void PaymentGroups_SeparateCurrentAndPreviousCompletionPayments()
+    {
+        var details = CreateDetails("20260825-0018") with
+        {
+            CompletionVersion = 2,
+            Payments =
+            [
+                new SaleDetailsPaymentDto(1, 1, 1, 100m, new DateTime(2026, 8, 25, 10, 0, 0)),
+                new SaleDetailsPaymentDto(2, 2, 1, 120m, new DateTime(2026, 8, 25, 11, 0, 0))
+            ]
+        };
+
+        var viewModel = new SaleDetailsDialogViewModel(
+            details,
+            new RecordingClipboardService(),
+            new StubHistoryDialogService(),
+            CancellationToken.None);
+
+        Assert.Equal("მოქმედი გადახდები", viewModel.PaymentGroups[0].Header);
+        Assert.Equal(2, Assert.Single(viewModel.PaymentGroups[0].Payments).CompletionVersion);
+        Assert.Equal("წინა დასრულება #1", viewModel.PaymentGroups[1].Header);
+        Assert.Equal(1, Assert.Single(viewModel.PaymentGroups[1].Payments).CompletionVersion);
+    }
+
     private static SaleDetailsDto CreateDetails(string saleNumber)
         => new(
             1,
             saleNumber,
             2,
+            1,
             10,
             "Customer",
             null,

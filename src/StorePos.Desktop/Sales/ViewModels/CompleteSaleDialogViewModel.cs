@@ -36,7 +36,8 @@ public sealed class CompleteSaleDialogViewModel : ObservableObject
         long saleId,
         decimal totalAmount,
         long? customerId,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        PreviousCompletionPaymentStateDto? previousPaymentState = null)
     {
         _apiClient = apiClient;
         _saleId = saleId;
@@ -46,6 +47,7 @@ public sealed class CompleteSaleDialogViewModel : ObservableObject
         _completeCommand = new AsyncRelayCommand(CompleteAsync, () => CanComplete);
         CancelCommand = new RelayCommand(
             () => CloseRequested?.Invoke(this, new DialogCloseRequestedEventArgs(false)));
+        InitializePreviousPaymentState(previousPaymentState);
         Recalculate();
     }
 
@@ -127,6 +129,33 @@ public sealed class CompleteSaleDialogViewModel : ObservableObject
     public ICommand CompleteCommand => _completeCommand;
 
     public ICommand CancelCommand { get; }
+
+    private void InitializePreviousPaymentState(
+        PreviousCompletionPaymentStateDto? previousPaymentState)
+    {
+        if (previousPaymentState is null)
+        {
+            return;
+        }
+
+        _cashAmount = FormatPaymentInput(previousPaymentState.CashAmount);
+        _cardAmount = FormatPaymentInput(previousPaymentState.CardAmount);
+        _bankTransferAmount = FormatPaymentInput(previousPaymentState.BankTransferAmount);
+        _otherAmount = FormatPaymentInput(previousPaymentState.OtherAmount);
+
+        var calculation = PaymentCalculator.Calculate(
+            TotalAmount,
+            [
+                previousPaymentState.CashAmount,
+                previousPaymentState.CardAmount,
+                previousPaymentState.BankTransferAmount,
+                previousPaymentState.OtherAmount
+            ]);
+        _allowDebt = calculation.RemainingAmount > 0;
+    }
+
+    private static string? FormatPaymentInput(decimal amount)
+        => amount == 0m ? null : DecimalInputParser.Format(amount);
 
     private async Task CompleteAsync()
     {
