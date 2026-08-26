@@ -45,7 +45,8 @@ public sealed class GetDraftSaleDetailsQueryHandler(ISaleRepository saleReposito
             var previousCompletionPayments = sale.Payments
                 .Where(payment =>
                     payment.CompletionVersion == sale.CompletionVersion &&
-                    payment.PaymentKind == SalePaymentKind.Completion)
+                    (payment.PaymentKind == SalePaymentKind.Completion ||
+                     payment.PaymentKind == SalePaymentKind.DebtRepayment))
                 .ToArray();
 
             previousPaymentState = new PreviousCompletionPaymentStateModel(
@@ -61,6 +62,9 @@ public sealed class GetDraftSaleDetailsQueryHandler(ISaleRepository saleReposito
             sale.SaleNumber,
             sale.CompletionVersion,
             sale.TotalAmount,
+            sale.PaidAmount,
+            sale.OutstandingAmount,
+            sale.HasDebt,
             sale.DateCreated,
             sale.CustomerId,
             sale.CustomerName,

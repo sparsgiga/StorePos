@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using StorePos.Persistence.Context;
 
@@ -11,9 +12,11 @@ using StorePos.Persistence.Context;
 namespace StorePos.Persistence.Migrations
 {
     [DbContext(typeof(StorePosDbContext))]
-    partial class StorePosDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260826111923_PersistSaleFinancialSnapshot")]
+    partial class PersistSaleFinancialSnapshot
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

@@ -59,12 +59,96 @@ public sealed class CompletionVersionMigrationTests
         Assert.Equal(1, sales["MIG-COMPLETED-ZERO"].CompletionVersion);
         Assert.Equal(0, sales["MIG-DRAFT"].CompletionVersion);
         Assert.Equal(0, sales["MIG-CANCELLED"].CompletionVersion);
+        Assert.Equal(25m, sales["MIG-COMPLETED-PAID"].PaidAmount);
+        Assert.Equal(75m, sales["MIG-COMPLETED-PAID"].OutstandingAmount);
+        Assert.Equal(0m, sales["MIG-COMPLETED-ZERO"].PaidAmount);
+        Assert.Equal(50m, sales["MIG-COMPLETED-ZERO"].OutstandingAmount);
+        Assert.Equal(0m, sales["MIG-DRAFT"].PaidAmount);
+        Assert.Equal(0m, sales["MIG-DRAFT"].OutstandingAmount);
         Assert.Equal(1, payment.CompletionVersion);
         Assert.Equal(25m, payment.Amount);
         Assert.Equal(PaymentType.BankTransfer, payment.PaymentType);
         Assert.Equal(SalePaymentKind.DebtRepayment, payment.PaymentKind);
         Assert.Equal(operationId, payment.OperationId);
         Assert.Equal(paymentDate, payment.DateCreated);
+    }
+
+    [SqlServerFact]
+    public async Task FinancialSnapshotUpgrade_UsesOnlyCurrentVersionAndBothPaymentKinds()
+    {
+        await using var database = new SqlServerTestDatabase();
+        await database.MigrateToAsync("20260826100829_PreserveSalePaymentHistory");
+        var operationOne = Guid.NewGuid();
+        var operationTwo = Guid.NewGuid();
+
+        await using (var oldSchema = database.CreateContext())
+        {
+            await oldSchema.Database.ExecuteSqlInterpolatedAsync(
+                $"""
+                INSERT INTO [dbo].[Sales]
+                    ([SaleNumber], [Status], [CashierId], [CustomerId], [CustomerName],
+                     [CustomerIdentificationNumber], [TotalAmount], [Comment], [DateCreated],
+                     [DateUpdated], [DateCompleted], [DateCancelled], [FinancialRevision],
+                     [CompletionVersion])
+                VALUES
+                    (N'MIG-SNAPSHOT-V1', 2, NULL, NULL, NULL, NULL, 1000.00, NULL,
+                     '2026-08-26T09:00:00', NULL, '2026-08-26T10:00:00', NULL, 1, 1),
+                    (N'MIG-SNAPSHOT-V2', 1, NULL, NULL, NULL, NULL, 1000.00, NULL,
+                     '2026-08-26T09:00:00', NULL, NULL, NULL, 2, 2),
+                    (N'MIG-SNAPSHOT-FULL-DEBT', 2, NULL, NULL, NULL, NULL, 300.00, NULL,
+                     '2026-08-26T09:00:00', NULL, '2026-08-26T10:00:00', NULL, 0, 1),
+                    (N'MIG-SNAPSHOT-NEW', 1, NULL, NULL, NULL, NULL, 500.00, NULL,
+                     '2026-08-26T09:00:00', NULL, NULL, NULL, 0, 0);
+
+                INSERT INTO [dbo].[SalePayments]
+                    ([SaleId], [CompletionVersion], [PaymentType], [PaymentKind], [Amount],
+                     [OperationId], [DateCreated], [DateUpdated])
+                SELECT [Id], 1, 1, 1, 500.00, NULL, '2026-08-26T10:00:00', NULL
+                FROM [dbo].[Sales] WHERE [SaleNumber] = N'MIG-SNAPSHOT-V1'
+                UNION ALL
+                SELECT [Id], 1, 2, 2, 200.00, {operationOne}, '2026-08-26T11:00:00', NULL
+                FROM [dbo].[Sales] WHERE [SaleNumber] = N'MIG-SNAPSHOT-V1'
+                UNION ALL
+                SELECT [Id], 1, 1, 1, 600.00, NULL, '2026-08-26T10:00:00', NULL
+                FROM [dbo].[Sales] WHERE [SaleNumber] = N'MIG-SNAPSHOT-V2'
+                UNION ALL
+                SELECT [Id], 1, 2, 2, 100.00, {operationTwo}, '2026-08-26T11:00:00', NULL
+                FROM [dbo].[Sales] WHERE [SaleNumber] = N'MIG-SNAPSHOT-V2'
+                UNION ALL
+                SELECT [Id], 2, 3, 1, 400.00, NULL, '2026-08-26T12:00:00', NULL
+                FROM [dbo].[Sales] WHERE [SaleNumber] = N'MIG-SNAPSHOT-V2'
+                UNION ALL
+                SELECT [Id], 2, 4, 2, 50.00, NEWID(), '2026-08-26T13:00:00', NULL
+                FROM [dbo].[Sales] WHERE [SaleNumber] = N'MIG-SNAPSHOT-V2';
+                """);
+        }
+
+        await database.MigrateToLatestAsync();
+
+        await using var verification = database.CreateContext();
+        var sales = await verification.Sales.AsNoTracking()
+            .ToDictionaryAsync(sale => sale.SaleNumber);
+        var payments = await verification.SalePayments.AsNoTracking().ToArrayAsync();
+
+        Assert.Equal((700m, 300m), (
+            sales["MIG-SNAPSHOT-V1"].PaidAmount,
+            sales["MIG-SNAPSHOT-V1"].OutstandingAmount));
+        Assert.Equal((450m, 550m), (
+            sales["MIG-SNAPSHOT-V2"].PaidAmount,
+            sales["MIG-SNAPSHOT-V2"].OutstandingAmount));
+        Assert.Equal((0m, 300m), (
+            sales["MIG-SNAPSHOT-FULL-DEBT"].PaidAmount,
+            sales["MIG-SNAPSHOT-FULL-DEBT"].OutstandingAmount));
+        Assert.Equal((0m, 0m), (
+            sales["MIG-SNAPSHOT-NEW"].PaidAmount,
+            sales["MIG-SNAPSHOT-NEW"].OutstandingAmount));
+        Assert.Equal(6, payments.Length);
+        Assert.Contains(payments, payment =>
+            payment.OperationId == operationOne &&
+            payment.Amount == 200m &&
+            payment.PaymentKind == SalePaymentKind.DebtRepayment);
+        Assert.Contains(payments, payment =>
+            payment.CompletionVersion == 1 && payment.Amount == 600m);
     }
 
     [SqlServerFact]

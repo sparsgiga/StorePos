@@ -33,6 +33,14 @@ public sealed class SaleConfiguration : IEntityTypeConfiguration<Sale>
             .HasPrecision(18, 2)
             .IsRequired();
 
+        builder.Property(x => x.PaidAmount)
+            .HasPrecision(18, 2)
+            .IsRequired();
+
+        builder.Property(x => x.OutstandingAmount)
+            .HasPrecision(18, 2)
+            .IsRequired();
+
         builder.Property(x => x.FinancialRevision).IsRequired();
         builder.Property(x => x.CompletionVersion).IsRequired();
 

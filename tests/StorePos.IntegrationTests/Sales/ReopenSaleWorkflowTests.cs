@@ -143,7 +143,7 @@ public sealed class ReopenSaleWorkflowTests
     }
 
     [Fact]
-    public async Task CompleteReopenAndCancel_PreservesPaymentsButReportsZeroCurrentMoney()
+    public async Task CompleteReopenAndCancel_PreservesPaymentsAndFinancialSnapshot()
     {
         var options = new DbContextOptionsBuilder<StorePosDbContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
@@ -177,11 +177,11 @@ public sealed class ReopenSaleWorkflowTests
             .SingleAsync(current => current.Id == sale.Id);
         Assert.Equal(SaleStatus.Cancelled, persisted.Status);
         Assert.Equal(paymentId, Assert.Single(persisted.Payments).Id);
-        Assert.Equal(0m, persisted.PaidAmount);
+        Assert.Equal(10m, persisted.PaidAmount);
         Assert.Equal(0m, persisted.OutstandingAmount);
         var details = await new SalesReadService(context).GetDetailsAsync(sale.Id);
         Assert.NotNull(details);
-        Assert.Equal(0m, details.PaidAmount);
+        Assert.Equal(10m, details.PaidAmount);
         Assert.Equal(0m, details.OutstandingAmount);
         Assert.Single(details.Payments);
     }

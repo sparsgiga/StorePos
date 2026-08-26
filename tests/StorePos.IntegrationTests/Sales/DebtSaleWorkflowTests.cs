@@ -16,7 +16,7 @@ namespace StorePos.IntegrationTests.Sales;
 public sealed class DebtSaleWorkflowTests
 {
     [Fact]
-    public async Task LaterDebtPayment_PersistsLocalAuditAndReopenIsRejected()
+    public async Task LaterDebtPayment_PersistsLocalAuditAndReopenPreservesFinancialState()
     {
         await using var context = CreateContext();
         var sale = CreateSale("20260825-0101", 200m, withCustomer: true);
@@ -48,14 +48,32 @@ public sealed class DebtSaleWorkflowTests
         Assert.Equal(SalePaymentKind.DebtRepayment, result.Payment.PaymentKind);
         Assert.InRange(result.Payment.DateCreated, beforePayment, afterPayment);
 
-        await Assert.ThrowsAsync<SaleOperationConflictException>(() =>
-            new ReopenSaleCommandHandler(
-                    new SaleRepository(context),
-                    new UnitOfWork(context))
-                .Handle(new ReopenSaleCommand(sale.Id), CancellationToken.None));
+        var reopened = await new ReopenSaleCommandHandler(
+                new SaleRepository(context),
+                new UnitOfWork(context))
+            .Handle(new ReopenSaleCommand(sale.Id), CancellationToken.None);
 
-        Assert.Equal(SaleStatus.Completed, sale.Status);
+        Assert.NotNull(reopened);
+        Assert.Equal(SaleStatus.Draft, sale.Status);
+        Assert.Equal(160m, sale.PaidAmount);
+        Assert.Equal(40m, sale.OutstandingAmount);
         Assert.Equal(2, sale.Payments.Count);
+
+        context.ChangeTracker.Clear();
+        var details = await new SalesReadService(context).GetDetailsAsync(sale.Id);
+        Assert.NotNull(details);
+        Assert.Equal(SaleStatus.Draft, details.Status);
+        Assert.Equal(160m, details.PaidAmount);
+        Assert.Equal(40m, details.OutstandingAmount);
+        Assert.True(details.HasDebt);
+
+        var history = await new SalesReadService(context).GetHistoryAsync(
+            new GetSalesHistoryQuery(Status: SaleStatus.Draft),
+            CancellationToken.None);
+        var historySale = Assert.Single(history.Items);
+        Assert.Equal(160m, historySale.CashAmount);
+        Assert.Equal(160m, historySale.PaidAmount);
+        Assert.Equal(40m, historySale.OutstandingAmount);
     }
 
     [Fact]

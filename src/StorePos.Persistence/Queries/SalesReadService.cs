@@ -97,47 +97,27 @@ public sealed class SalesReadService(StorePosDbContext context) : ISalesReadServ
                         : sale.DateCreated,
                 sale.Payments
                     .Where(payment =>
-                        sale.Status == SaleStatus.Completed &&
                         payment.CompletionVersion == sale.CompletionVersion &&
                         payment.PaymentType == PaymentType.Cash)
                     .Sum(payment => (decimal?)payment.Amount) ?? 0m,
                 sale.Payments
                     .Where(payment =>
-                        sale.Status == SaleStatus.Completed &&
                         payment.CompletionVersion == sale.CompletionVersion &&
                         payment.PaymentType == PaymentType.Card)
                     .Sum(payment => (decimal?)payment.Amount) ?? 0m,
                 sale.Payments
                     .Where(payment =>
-                        sale.Status == SaleStatus.Completed &&
                         payment.CompletionVersion == sale.CompletionVersion &&
                         payment.PaymentType == PaymentType.BankTransfer)
                     .Sum(payment => (decimal?)payment.Amount) ?? 0m,
                 sale.Payments
                     .Where(payment =>
-                        sale.Status == SaleStatus.Completed &&
                         payment.CompletionVersion == sale.CompletionVersion &&
                         payment.PaymentType == PaymentType.Other)
                     .Sum(payment => (decimal?)payment.Amount) ?? 0m,
-                sale.Status == SaleStatus.Completed
-                    ? sale.Payments
-                        .Where(payment =>
-                            payment.CompletionVersion == sale.CompletionVersion)
-                        .Sum(payment => (decimal?)payment.Amount) ?? 0m
-                    : 0m,
-                sale.Status == SaleStatus.Completed
-                    ? sale.TotalAmount -
-                        (sale.Payments
-                            .Where(payment =>
-                                payment.CompletionVersion == sale.CompletionVersion)
-                            .Sum(payment => (decimal?)payment.Amount) ?? 0m)
-                    : 0m,
-                sale.Status == SaleStatus.Completed &&
-                    sale.TotalAmount -
-                    (sale.Payments
-                        .Where(payment =>
-                            payment.CompletionVersion == sale.CompletionVersion)
-                        .Sum(payment => (decimal?)payment.Amount) ?? 0m) > 0m))
+                sale.PaidAmount,
+                sale.OutstandingAmount,
+                sale.OutstandingAmount > 0m))
             .ToArrayAsync(cancellationToken);
 
         return new PagedResult<SalesHistoryItemModel>(
@@ -250,6 +230,8 @@ public sealed class SalesReadService(StorePosDbContext context) : ISalesReadServ
                 currentSale.CustomerIdentificationNumber,
                 currentSale.Comment,
                 currentSale.TotalAmount,
+                currentSale.PaidAmount,
+                currentSale.OutstandingAmount,
                 currentSale.DateCreated,
                 currentSale.DateCompleted,
                 currentSale.DateCancelled
@@ -301,16 +283,6 @@ public sealed class SalesReadService(StorePosDbContext context) : ISalesReadServ
                 "The sale contains an invalid payment completion version.");
         }
 
-        var paidAmount = sale.Status == SaleStatus.Completed
-            ? SalePayment.RoundAmount(payments
-                .Where(payment =>
-                    payment.CompletionVersion == sale.CompletionVersion)
-                .Sum(payment => payment.Amount))
-            : 0m;
-        var outstandingAmount = sale.Status == SaleStatus.Completed
-            ? SalePayment.RoundAmount(sale.TotalAmount - paidAmount)
-            : 0m;
-
         return new SaleDetailsModel(
             sale.Id,
             sale.SaleNumber,
@@ -321,9 +293,9 @@ public sealed class SalesReadService(StorePosDbContext context) : ISalesReadServ
             sale.CustomerIdentificationNumber,
             sale.Comment,
             sale.TotalAmount,
-            paidAmount,
-            outstandingAmount,
-            sale.Status == SaleStatus.Completed && outstandingAmount > 0,
+            sale.PaidAmount,
+            sale.OutstandingAmount,
+            sale.OutstandingAmount > 0,
             sale.DateCreated,
             sale.DateCompleted,
             sale.DateCancelled,

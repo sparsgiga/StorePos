@@ -64,6 +64,35 @@ public sealed class CompleteSaleDialogViewModelTests
         Assert.True(viewModel.AllowDebt);
     }
 
+    [Fact]
+    public void ReopenedAfterDebtRepayment_RestoresAllCurrentVersionMoney()
+    {
+        var viewModel = Create(
+            1000m,
+            new PreviousCompletionPaymentStateDto(1, 500m, 200m, 0m, 0m));
+
+        Assert.Equal("500", viewModel.CashAmount);
+        Assert.Equal("200", viewModel.CardAmount);
+        Assert.Null(viewModel.BankTransferAmount);
+        Assert.Null(viewModel.OtherAmount);
+        Assert.Equal(700m, viewModel.PaidAmount);
+        Assert.Equal(300m, viewModel.RemainingAmount);
+        Assert.True(viewModel.AllowDebt);
+        Assert.True(viewModel.CanComplete);
+    }
+
+    [Fact]
+    public void ReopenedAfterDebtRepayment_UsesCurrentEditedTotalForRemainingAmount()
+    {
+        var viewModel = Create(
+            900m,
+            new PreviousCompletionPaymentStateDto(1, 500m, 200m, 0m, 0m));
+
+        Assert.Equal(700m, viewModel.PaidAmount);
+        Assert.Equal(200m, viewModel.RemainingAmount);
+        Assert.True(viewModel.AllowDebt);
+    }
+
     [Theory]
     [InlineData(120, 30)]
     [InlineData(95, 5)]

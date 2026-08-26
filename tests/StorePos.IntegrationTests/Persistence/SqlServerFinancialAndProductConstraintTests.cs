@@ -255,4 +255,135 @@ public sealed class SqlServerFinancialAndProductConstraintTests
             Assert.Equal(snapshot.Value.Type, payment.PaymentType);
         }
     }
+
+    [SqlServerFact]
+    public async Task SqlServer_DebtRepaymentReopenAndRecompletePersistSnapshotAndHistory()
+    {
+        await using var database = new SqlServerTestDatabase();
+        await database.MigrateToLatestAsync();
+        long saleId;
+        var firstOperationId = Guid.NewGuid();
+        var secondOperationId = Guid.NewGuid();
+        var originalPayments = new Dictionary<long, (
+            int Version,
+            PaymentType Type,
+            SalePaymentKind Kind,
+            decimal Amount,
+            Guid? OperationId,
+            DateTime DateCreated)>();
+
+        await using (var setup = database.CreateContext())
+        {
+            var customer = Customer.Create("Snapshot Customer", "SQL-SNAPSHOT-CUSTOMER", null);
+            await setup.Customers.AddAsync(customer);
+            await setup.SaveChangesAsync();
+            var sale = Sale.Create("SQL-SNAPSHOT-LIFECYCLE");
+            await setup.Sales.AddAsync(sale);
+            await setup.SaveChangesAsync();
+            sale.AssignCustomer(customer.Id, customer.Name, customer.IdentificationNumber);
+            sale.AddManualItem("Item", 1m, 1000m);
+            sale.Complete(
+                [new SalePaymentAllocation(PaymentType.Cash, 500m)],
+                DateTime.Now,
+                allowDebt: true);
+            await setup.SaveChangesAsync();
+            saleId = sale.Id;
+        }
+
+        await using (var repaymentContext = database.CreateContext())
+        {
+            var sale = await new SaleRepository(repaymentContext)
+                .GetCompletedForUpdateAsync(saleId);
+            Assert.NotNull(sale);
+            sale.AddDebtPayment(firstOperationId, PaymentType.Card, 200m);
+            await repaymentContext.SaveChangesAsync();
+            foreach (var payment in sale.Payments)
+            {
+                originalPayments[payment.Id] = (
+                    payment.CompletionVersion,
+                    payment.PaymentType,
+                    payment.PaymentKind,
+                    payment.Amount,
+                    payment.OperationId,
+                    payment.DateCreated);
+            }
+        }
+
+        await using (var reopenContext = database.CreateContext())
+        {
+            var sale = await new SaleRepository(reopenContext)
+                .GetCompletedForUpdateAsync(saleId);
+            Assert.NotNull(sale);
+            Assert.Equal((700m, 300m, 1), (
+                sale.PaidAmount, sale.OutstandingAmount, sale.CompletionVersion));
+            sale.Reopen();
+            await reopenContext.SaveChangesAsync();
+        }
+
+        await using (var recompleteContext = database.CreateContext())
+        {
+            var sale = await new SaleRepository(recompleteContext)
+                .GetDraftForUpdateAsync(saleId);
+            Assert.NotNull(sale);
+            Assert.Equal(SaleStatus.Draft, sale.Status);
+            Assert.Equal((700m, 300m, 1), (
+                sale.PaidAmount, sale.OutstandingAmount, sale.CompletionVersion));
+            sale.Complete(
+                [
+                    new SalePaymentAllocation(PaymentType.Cash, 500m),
+                    new SalePaymentAllocation(PaymentType.Card, 200m)
+                ],
+                DateTime.Now,
+                allowDebt: true);
+            await recompleteContext.SaveChangesAsync();
+        }
+
+        await using (var secondCycleContext = database.CreateContext())
+        {
+            var sale = await new SaleRepository(secondCycleContext)
+                .GetCompletedForUpdateAsync(saleId);
+            Assert.NotNull(sale);
+            Assert.Equal((700m, 300m, 2), (
+                sale.PaidAmount, sale.OutstandingAmount, sale.CompletionVersion));
+            Assert.Equal(4, sale.Payments.Count);
+            Assert.Equal(2, sale.Payments.Count(payment =>
+                payment.CompletionVersion == 1));
+            Assert.Equal(2, sale.Payments.Count(payment =>
+                payment.CompletionVersion == 2 &&
+                payment.PaymentKind == SalePaymentKind.Completion));
+            foreach (var original in originalPayments)
+            {
+                var persisted = sale.Payments.Single(payment => payment.Id == original.Key);
+                Assert.Equal(original.Value, (
+                    persisted.CompletionVersion,
+                    persisted.PaymentType,
+                    persisted.PaymentKind,
+                    persisted.Amount,
+                    persisted.OperationId,
+                    persisted.DateCreated));
+                Assert.Null(persisted.DateUpdated);
+            }
+
+            sale.AddDebtPayment(secondOperationId, PaymentType.Cash, 100m);
+            await secondCycleContext.SaveChangesAsync();
+            Assert.Equal((800m, 200m), (sale.PaidAmount, sale.OutstandingAmount));
+            sale.Reopen();
+            await secondCycleContext.SaveChangesAsync();
+        }
+
+        await using var verification = database.CreateContext();
+        var finalSale = await new SaleRepository(verification)
+            .GetDraftForUpdateAsync(saleId);
+        Assert.NotNull(finalSale);
+        Assert.Equal(SaleStatus.Draft, finalSale.Status);
+        Assert.Equal((800m, 200m, 2), (
+            finalSale.PaidAmount,
+            finalSale.OutstandingAmount,
+            finalSale.CompletionVersion));
+        Assert.Single(finalSale.Payments, payment =>
+            payment.OperationId == secondOperationId &&
+            payment.CompletionVersion == 2 &&
+            payment.PaymentKind == SalePaymentKind.DebtRepayment &&
+            payment.Amount == 100m);
+    }
 }

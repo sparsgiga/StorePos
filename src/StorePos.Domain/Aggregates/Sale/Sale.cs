@@ -68,15 +68,11 @@ public sealed class Sale : AuditableEntity<long>, IAggregateRoot
 
     public IReadOnlyCollection<SalePayment> Payments => _payments;
 
-    public decimal PaidAmount => Status == SaleStatus.Completed
-        ? CalculateCurrentPaidAmount()
-        : 0m;
+    public decimal PaidAmount { get; private set; }
 
-    public decimal OutstandingAmount => Status == SaleStatus.Completed
-        ? FinancialPrecision.RoundMoney(TotalAmount - PaidAmount)
-        : 0m;
+    public decimal OutstandingAmount { get; private set; }
 
-    public bool HasDebt => Status == SaleStatus.Completed && OutstandingAmount > 0;
+    public bool HasDebt => OutstandingAmount > 0;
 
     public static Sale Create(
         string saleNumber,
@@ -236,12 +232,6 @@ public sealed class Sale : AuditableEntity<long>, IAggregateRoot
 
         EnsurePaymentVersionsAreValid();
 
-        if (_payments.Any(payment => payment.PaymentKind == SalePaymentKind.DebtRepayment))
-        {
-            throw new InvalidOperationException(
-                "A draft sale cannot contain a historical debt repayment.");
-        }
-
         var nextCompletionVersion = checked(CompletionVersion + 1);
 
         var allocations = payments.ToArray();
@@ -297,6 +287,8 @@ public sealed class Sale : AuditableEntity<long>, IAggregateRoot
 
         _payments.AddRange(newPayments);
         CompletionVersion = nextCompletionVersion;
+        PaidAmount = paymentTotal;
+        OutstandingAmount = outstandingAmount;
         Status = SaleStatus.Completed;
         DateCompleted = dateCompleted;
         DateCancelled = null;
@@ -355,6 +347,8 @@ public sealed class Sale : AuditableEntity<long>, IAggregateRoot
         }
 
         _payments.Add(payment);
+        PaidAmount = FinancialPrecision.SumMoney([PaidAmount, payment.Amount]);
+        RefreshOutstandingAmount();
         FinancialRevision = checked(FinancialRevision + 1);
         return payment;
     }
@@ -379,15 +373,10 @@ public sealed class Sale : AuditableEntity<long>, IAggregateRoot
 
         EnsurePaymentVersionsAreValid();
 
-        if (_payments.Any(payment => payment.PaymentKind == SalePaymentKind.DebtRepayment))
-        {
-            throw new InvalidOperationException(
-                "This sale has a later debt repayment and can no longer be reopened.");
-        }
-
         Status = SaleStatus.Draft;
         DateCompleted = null;
         DateCancelled = null;
+        RefreshOutstandingAmount();
     }
 
     private void EnsureDraft()
@@ -399,18 +388,24 @@ public sealed class Sale : AuditableEntity<long>, IAggregateRoot
     }
 
     private void RecalculateTotal()
-        => TotalAmount = FinancialPrecision.SumMoney(
+    {
+        TotalAmount = FinancialPrecision.SumMoney(
             _items.Select(item => item.LineTotal));
 
-    private decimal CalculateCurrentPaidAmount()
-    {
-        EnsurePaymentVersionsAreValid();
+        if (CompletionVersion == 0)
+        {
+            PaidAmount = 0m;
+            OutstandingAmount = 0m;
+            return;
+        }
 
-        return FinancialPrecision.SumMoney(
-            _payments
-                .Where(payment => payment.CompletionVersion == CompletionVersion)
-                .Select(payment => payment.Amount));
+        RefreshOutstandingAmount();
     }
+
+    private void RefreshOutstandingAmount()
+        => OutstandingAmount = Math.Max(
+            FinancialPrecision.RoundMoney(TotalAmount - PaidAmount),
+            0m);
 
     private void EnsurePaymentVersionsAreValid()
     {

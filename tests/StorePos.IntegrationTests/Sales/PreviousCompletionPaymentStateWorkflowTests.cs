@@ -12,6 +12,64 @@ namespace StorePos.IntegrationTests.Sales;
 public sealed class PreviousCompletionPaymentStateWorkflowTests
 {
     [Fact]
+    public async Task ReopenedDraft_IncludesCompletionAndDebtRepaymentInEffectiveAllocation()
+    {
+        await using var context = CreateContext();
+        var sale = await CreatePersistedSaleAsync(context, "PREFILL-DEBT", 1000m);
+        sale.AssignCustomer(10, "Customer", null);
+        sale.Complete(
+            [new SalePaymentAllocation(PaymentType.Cash, 500m)],
+            DateTime.Now,
+            allowDebt: true);
+        sale.AddDebtPayment(Guid.NewGuid(), PaymentType.Card, 200m);
+        await context.SaveChangesAsync();
+        sale.Reopen();
+        await context.SaveChangesAsync();
+        context.ChangeTracker.Clear();
+
+        var details = await GetDetailsAsync(context, sale.Id);
+        var state = Assert.IsType<PreviousCompletionPaymentStateModel>(
+            details?.PreviousCompletionPaymentState);
+
+        Assert.Equal(500m, state.CashAmount);
+        Assert.Equal(200m, state.CardAmount);
+        Assert.Equal(0m, state.BankTransferAmount);
+        Assert.Equal(0m, state.OtherAmount);
+        Assert.Equal(700m, state.CashAmount + state.CardAmount);
+        Assert.Equal(700m, details!.PaidAmount);
+        Assert.Equal(300m, details.OutstandingAmount);
+        Assert.True(details.HasDebt);
+    }
+
+    [Fact]
+    public async Task ReopenedDraft_AfterTotalEditKeepsEffectiveAllocationAndRefreshesDebt()
+    {
+        await using var context = CreateContext();
+        var sale = await CreatePersistedSaleAsync(context, "PREFILL-DEBT-EDIT", 1000m);
+        sale.AssignCustomer(10, "Customer", null);
+        sale.Complete(
+            [new SalePaymentAllocation(PaymentType.Cash, 500m)],
+            DateTime.Now,
+            allowDebt: true);
+        sale.AddDebtPayment(Guid.NewGuid(), PaymentType.Card, 200m);
+        await context.SaveChangesAsync();
+        sale.Reopen();
+        var item = Assert.Single(sale.Items);
+        sale.UpdateItem(item.Id, item.ProductName, 1m, 900m);
+        await context.SaveChangesAsync();
+        context.ChangeTracker.Clear();
+
+        var details = await GetDetailsAsync(context, sale.Id);
+        var state = Assert.IsType<PreviousCompletionPaymentStateModel>(
+            details?.PreviousCompletionPaymentState);
+
+        Assert.Equal(500m, state.CashAmount);
+        Assert.Equal(200m, state.CardAmount);
+        Assert.Equal(700m, details!.PaidAmount);
+        Assert.Equal(200m, details.OutstandingAmount);
+    }
+
+    [Fact]
     public async Task FirstTimeDraft_ReturnsNoPreviousPaymentState()
     {
         await using var context = CreateContext();

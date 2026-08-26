@@ -45,7 +45,7 @@ public sealed class SaleCancellationTests
     }
 
     [Fact]
-    public void Cancel_ReopenedSale_PreservesHistoricalPaymentsAndReportsNoCurrentMoney()
+    public void Cancel_ReopenedSale_PreservesHistoricalPaymentsAndFinancialSnapshot()
     {
         var sale = Sale.Create("20260825-0002");
         sale.AddManualItem("Item", 1m, 10m);
@@ -60,7 +60,7 @@ public sealed class SaleCancellationTests
         Assert.Equal(SaleStatus.Cancelled, sale.Status);
         Assert.Equal(1, sale.CompletionVersion);
         Assert.Same(payment, Assert.Single(sale.Payments));
-        Assert.Equal(0m, sale.PaidAmount);
+        Assert.Equal(10m, sale.PaidAmount);
         Assert.Equal(0m, sale.OutstandingAmount);
         Assert.False(sale.HasDebt);
     }
