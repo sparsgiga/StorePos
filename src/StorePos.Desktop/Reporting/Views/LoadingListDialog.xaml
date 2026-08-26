@@ -1,0 +1,88 @@
+<Window x:Class="StorePos.Desktop.Reporting.Views.LoadingListDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="დასატვირთი პროდუქცია"
+        Width="1000" Height="720"
+        MinWidth="760" MinHeight="520"
+        WindowStartupLocation="CenterOwner"
+        ShowInTaskbar="False">
+    <Grid Margin="14">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <DockPanel>
+            <StackPanel DockPanel.Dock="Left">
+                <TextBlock FontSize="20" FontWeight="SemiBold" Text="დასატვირთი პროდუქციის შერჩევა" />
+                <TextBlock Margin="0,3,0,0" Foreground="#5F6B7A"
+                           Text="{Binding SaleNumber, StringFormat=გაყიდვა: {0}}" />
+            </StackPanel>
+            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button MinWidth="110" Margin="0,0,8,0" Padding="10,5"
+                        Command="{Binding SelectAllCommand}" Content="ყველას მონიშვნა" />
+                <Button MinWidth="110" Padding="10,5"
+                        Command="{Binding ClearAllCommand}" Content="ყველას მოხსნა" />
+            </StackPanel>
+        </DockPanel>
+
+        <StackPanel Grid.Row="1" Margin="0,12,0,10">
+            <TextBlock Margin="0,0,0,3" Text="დოკუმენტის კომენტარი (არ ინახება)" />
+            <TextBox Padding="7,5" MaxLength="500"
+                     Text="{Binding PrintComment, UpdateSourceTrigger=PropertyChanged}" />
+        </StackPanel>
+
+        <DataGrid Grid.Row="2" ItemsSource="{Binding Items}"
+                  AutoGenerateColumns="False" CanUserAddRows="False"
+                  IsReadOnly="False" HeadersVisibility="Column"
+                  EnableRowVirtualization="True" EnableColumnVirtualization="True">
+            <DataGrid.Columns>
+                <DataGridCheckBoxColumn Width="70" Header="არჩევა"
+                                        Binding="{Binding IsSelected, UpdateSourceTrigger=PropertyChanged}" />
+                <DataGridTextColumn Width="*" MinWidth="280" Header="პროდუქტი"
+                                    Binding="{Binding ProductName}" IsReadOnly="True" />
+                <DataGridTextColumn Width="120" Header="გაყიდული"
+                                    Binding="{Binding SoldQuantity, StringFormat={}{0:0.#####}}" IsReadOnly="True" />
+                <DataGridTemplateColumn Width="180" Header="დასატვირთი">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <StackPanel Margin="2">
+                                <TextBox Padding="5,3"
+                                         Text="{Binding LoadingQuantityText, UpdateSourceTrigger=PropertyChanged}" />
+                                <TextBlock Margin="0,2,0,0" Foreground="#B42318" FontSize="10"
+                                           Text="{Binding ValidationMessage}" TextWrapping="Wrap" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+                <DataGridTextColumn Width="110" Header="ერთეული"
+                                    Binding="{Binding MeasurementUnitName}" IsReadOnly="True" />
+            </DataGrid.Columns>
+        </DataGrid>
+
+        <StackPanel Grid.Row="3" Margin="0,8,0,8">
+            <TextBlock Foreground="#5F6B7A" Text="დოკუმენტი მზადდება...">
+                <TextBlock.Style>
+                    <Style TargetType="TextBlock">
+                        <Setter Property="Visibility" Value="Collapsed" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsBusy}" Value="True">
+                                <Setter Property="Visibility" Value="Visible" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </TextBlock.Style>
+            </TextBlock>
+            <TextBlock Foreground="#B42318" Text="{Binding ErrorMessage}" TextWrapping="Wrap" />
+        </StackPanel>
+
+        <StackPanel Grid.Row="4" HorizontalAlignment="Right" Orientation="Horizontal">
+            <Button MinWidth="135" Margin="0,0,8,0" Padding="12,6"
+                    Command="{Binding PreviewCommand}" Content="გადახედვა" />
+            <Button MinWidth="90" Padding="12,6" IsCancel="True" Content="დახურვა" />
+        </StackPanel>
+    </Grid>
+</Window>

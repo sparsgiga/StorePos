@@ -179,7 +179,7 @@
                                                     <TextBlock Grid.Column="2" FontWeight="SemiBold" Text="{Binding Name}" />
                                                     <TextBlock Grid.Column="3" Text="{Binding MeasurementUnitShortName, TargetNullValue=—}" />
                                                     <TextBlock Grid.Column="4"
-                                                               HorizontalAlignment="Right"
+                                                               HorizontalAlignment="Right" FontWeight="Bold" FontSize="16"
                                                                Text="{Binding Price, Converter={StaticResource DecimalDisplayConverter}}" />
                                                 </Grid>
                                             </DataTemplate>
@@ -410,6 +410,11 @@
                                     <StackPanel DockPanel.Dock="Right"
                                                 HorizontalAlignment="Right"
                                                 Orientation="Horizontal">
+                                        <Button MinWidth="110"
+                                                Margin="0,0,8,0"
+                                                Padding="12,6"
+                                                Command="{Binding DataContext.PrintSaleCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                Content="ბეჭდვა" />
                                         <Button MinWidth="140"
                                                 Margin="0,0,8,0"
                                                 Padding="12,6"

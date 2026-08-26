@@ -108,6 +108,8 @@
             <StackPanel DockPanel.Dock="Left" Orientation="Horizontal">
                 <Button MinWidth="100" Margin="0,0,8,0" Padding="10,5"
                         Command="{Binding OpenDetailsCommand}" Content="დეტალები" />
+                <Button MinWidth="100" Margin="0,0,8,0" Padding="10,5"
+                        Command="{Binding PrintCommand}" Content="ბეჭდვა" />
                 <Button MinWidth="150" Padding="10,5"
                         Command="{Binding ReopenCommand}" Content="Draft-ზე დაბრუნება" />
             </StackPanel>

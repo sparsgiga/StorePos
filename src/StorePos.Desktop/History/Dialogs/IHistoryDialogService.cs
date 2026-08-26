@@ -13,5 +13,7 @@ public interface IHistoryDialogService
         decimal outstandingAmount,
         CancellationToken cancellationToken = default);
 
+    void ShowSaleReporting(SaleDetailsDto sale);
+
     bool ConfirmReopen(SalesHistoryItemDto sale);
 }

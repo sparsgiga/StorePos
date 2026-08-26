@@ -9,6 +9,7 @@ using StorePos.Desktop.History.Dialogs;
 using StorePos.Desktop.History.ViewModels;
 using StorePos.Desktop.Products.Dialogs;
 using StorePos.Desktop.Products.ViewModels;
+using StorePos.Desktop.Reporting.Services;
 using StorePos.Desktop.Sales.Dialogs;
 using StorePos.Desktop.Sales.ViewModels;
 using StorePos.Desktop.Startup;
@@ -103,10 +104,12 @@ public partial class App : Application
     private async Task StartMainWindowAsync()
     {
         var apiClient = new StorePosApiClient(_httpClient!);
-        var dialogService = new SalesDialogService(apiClient);
+        var reportingService = new SaleReportingService();
+        var dialogService = new SalesDialogService(apiClient, reportingService);
         var historyDialogService = new HistoryDialogService(
             apiClient,
-            new WindowsClipboardService());
+            new WindowsClipboardService(),
+            reportingService);
         var salesWorkspace = new SalesWorkspaceViewModel(apiClient, dialogService);
         var salesHistory = new SalesHistoryViewModel(apiClient, historyDialogService);
         var soldProducts = new SoldProductsViewModel(apiClient, historyDialogService);

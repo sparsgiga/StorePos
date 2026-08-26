@@ -1,0 +1,63 @@
+<Window x:Class="StorePos.Desktop.Reporting.Views.PrintOptionsDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="ბეჭდვა და Excel"
+        Width="520" Height="330"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize"
+        ShowInTaskbar="False">
+    <Grid Margin="18">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <StackPanel>
+            <TextBlock FontSize="20" FontWeight="SemiBold" Text="დოკუმენტის მომზადება" />
+            <TextBlock Margin="0,4,0,0" Foreground="#5F6B7A"
+                       Text="{Binding SaleNumber, StringFormat=გაყიდვა: {0}}" />
+        </StackPanel>
+
+        <StackPanel Grid.Row="1" Margin="4,20,4,12">
+            <RadioButton Padding="8" FontSize="15" FontWeight="SemiBold"
+                         Content="გაყიდვის სრული ანგარიში"
+                         IsChecked="{Binding IsFullSaleSelected}" />
+            <TextBlock Margin="34,0,0,12" Foreground="#5F6B7A" TextWrapping="Wrap"
+                       Text="პროდუქცია, ფასები, გადახდილი თანხა და დავალიანება." />
+            <RadioButton Padding="8" FontSize="15" FontWeight="SemiBold"
+                         Content="დასატვირთი პროდუქცია"
+                         IsChecked="{Binding IsLoadingListSelected}" />
+            <TextBlock Margin="34,0,0,0" Foreground="#5F6B7A" TextWrapping="Wrap"
+                       Text="მხოლოდ შერჩეული პროდუქცია და დასატვირთი რაოდენობა — ფასების გარეშე." />
+        </StackPanel>
+
+        <StackPanel Grid.Row="2" Margin="0,0,0,8">
+            <TextBlock Foreground="#5F6B7A" Text="დოკუმენტი მზადდება...">
+                <TextBlock.Style>
+                    <Style TargetType="TextBlock">
+                        <Setter Property="Visibility" Value="Collapsed" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsBusy}" Value="True">
+                                <Setter Property="Visibility" Value="Visible" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </TextBlock.Style>
+            </TextBlock>
+            <TextBlock Foreground="#B42318" Text="{Binding ErrorMessage}" TextWrapping="Wrap" />
+        </StackPanel>
+
+        <DockPanel Grid.Row="3">
+            <Button DockPanel.Dock="Left" MinWidth="145" Padding="12,6"
+                    Command="{Binding ExportExcelCommand}"
+                    Content="Excel-ში გატანა" />
+            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                <Button MinWidth="115" Margin="0,0,8,0" Padding="12,6"
+                        Command="{Binding ContinueCommand}" Content="გაგრძელება" />
+                <Button MinWidth="90" Padding="12,6" IsCancel="True" Content="დახურვა" />
+            </StackPanel>
+        </DockPanel>
+    </Grid>
+</Window>

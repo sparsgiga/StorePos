@@ -1,6 +1,8 @@
 using System.Windows;
 using StorePos.Desktop.Api;
 using StorePos.Desktop.Common;
+using StorePos.Desktop.Reporting;
+using StorePos.Desktop.Reporting.Services;
 using StorePos.Desktop.History.Models;
 using StorePos.Desktop.History.ViewModels;
 using StorePos.Desktop.History.Views;
@@ -9,7 +11,8 @@ namespace StorePos.Desktop.History.Dialogs;
 
 public sealed class HistoryDialogService(
     IStorePosApiClient apiClient,
-    IClipboardService clipboardService) : IHistoryDialogService
+    IClipboardService clipboardService,
+    ISaleReportingService reportingService) : IHistoryDialogService
 {
     public bool ShowSaleDetails(
         SaleDetailsDto sale,
@@ -48,6 +51,10 @@ public sealed class HistoryDialogService(
 
         return dialog.ShowDialog() == true ? viewModel.Result : null;
     }
+
+    public void ShowSaleReporting(SaleDetailsDto sale)
+        => reportingService.ShowOptions(
+            SaleReportModelFactory.FromSaleDetails(sale, DateTime.Now));
 
     public bool ConfirmReopen(SalesHistoryItemDto sale)
         => MessageBox.Show(

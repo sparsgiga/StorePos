@@ -20,6 +20,7 @@ public sealed class SalesHistoryViewModel : ObservableObject, IDisposable
     private readonly AsyncRelayCommand _nextPageCommand;
     private readonly AsyncRelayCommand _openDetailsCommand;
     private readonly AsyncRelayCommand _reopenCommand;
+    private readonly AsyncRelayCommand _printCommand;
     private DateTime? _dateFrom = DateTime.Today;
     private DateTime? _dateTo = DateTime.Today;
     private string? _saleNumber;
@@ -51,6 +52,7 @@ public sealed class SalesHistoryViewModel : ObservableObject, IDisposable
         _nextPageCommand = new AsyncRelayCommand(NextPageAsync, CanGoNext);
         _openDetailsCommand = new AsyncRelayCommand(OpenDetailsAsync, CanOpenDetails);
         _reopenCommand = new AsyncRelayCommand(ReopenAsync, CanReopen);
+        _printCommand = new AsyncRelayCommand(PrintAsync, CanPrint);
     }
 
     public event EventHandler<SaleReopenedEventArgs>? SaleReopened;
@@ -155,6 +157,7 @@ public sealed class SalesHistoryViewModel : ObservableObject, IDisposable
     public ICommand NextPageCommand => _nextPageCommand;
     public ICommand OpenDetailsCommand => _openDetailsCommand;
     public ICommand ReopenCommand => _reopenCommand;
+    public ICommand PrintCommand => _printCommand;
 
     public Task RefreshAsync() => LoadPageAsync();
 
@@ -304,10 +307,42 @@ public sealed class SalesHistoryViewModel : ObservableObject, IDisposable
         }
     }
 
+    private async Task PrintAsync()
+    {
+        var sale = SelectedItem;
+        if (sale is null)
+        {
+            return;
+        }
+
+        try
+        {
+            IsBusy = true;
+            ErrorMessage = null;
+            var details = await _apiClient.GetSaleDetailsAsync(
+                sale.Id,
+                _lifetimeCancellation.Token);
+            _dialogService.ShowSaleReporting(details);
+        }
+        catch (OperationCanceledException) when (_lifetimeCancellation.IsCancellationRequested)
+        {
+        }
+        catch (Exception exception)
+        {
+            Trace.TraceError(exception.ToString());
+            ErrorMessage = "დოკუმენტის მომზადება ვერ მოხერხდა.";
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
     private bool CanGoPrevious() => !IsBusy && PageNumber > 1;
     private bool CanGoNext() => !IsBusy && PageNumber < TotalPages;
     private bool CanOpenDetails() => !IsBusy && SelectedItem is not null;
     private bool CanReopen() => !IsBusy && SelectedItem?.Status == 2;
+    private bool CanPrint() => !IsBusy && SelectedItem is not null;
 
     private void NotifyCommandStates()
     {
@@ -316,6 +351,7 @@ public sealed class SalesHistoryViewModel : ObservableObject, IDisposable
         _nextPageCommand.NotifyCanExecuteChanged();
         _openDetailsCommand.NotifyCanExecuteChanged();
         _reopenCommand.NotifyCanExecuteChanged();
+        _printCommand.NotifyCanExecuteChanged();
     }
 
 }

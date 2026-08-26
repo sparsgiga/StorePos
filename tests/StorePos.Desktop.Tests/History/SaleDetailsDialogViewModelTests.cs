@@ -62,6 +62,41 @@ public sealed class SaleDetailsDialogViewModelTests
         Assert.Equal(1, Assert.Single(viewModel.PaymentGroups[1].Payments).CompletionVersion);
     }
 
+    [Fact]
+    public void Print_AfterDebtPayment_UsesUpdatedCurrentFinancialSnapshot()
+    {
+        var addedPayment = new SaleDetailsPaymentDto(
+            1,
+            1,
+            2,
+            100m,
+            new DateTime(2026, 8, 25, 12, 0, 0));
+        var dialogs = new StubHistoryDialogService
+        {
+            DebtPaymentResult = new AddDebtPaymentResponse(
+                1,
+                200m,
+                200m,
+                0m,
+                false,
+                addedPayment)
+        };
+        var viewModel = new SaleDetailsDialogViewModel(
+            CreateDetails("20260825-0019"),
+            new RecordingClipboardService(),
+            dialogs,
+            CancellationToken.None);
+
+        viewModel.PayDebtCommand.Execute(null);
+        viewModel.PrintCommand.Execute(null);
+
+        Assert.NotNull(dialogs.ReportedSale);
+        Assert.Equal(200m, dialogs.ReportedSale.PaidAmount);
+        Assert.Equal(0m, dialogs.ReportedSale.OutstandingAmount);
+        Assert.False(dialogs.ReportedSale.HasDebt);
+        Assert.Contains(addedPayment, dialogs.ReportedSale.Payments);
+    }
+
     private static SaleDetailsDto CreateDetails(string saleNumber)
         => new(
             1,
@@ -95,6 +130,14 @@ public sealed class SaleDetailsDialogViewModelTests
 
     private sealed class StubHistoryDialogService : IHistoryDialogService
     {
+        public AddDebtPaymentResponse? DebtPaymentResult { get; init; }
+        public SaleDetailsDto? ReportedSale { get; private set; }
+
+        public void ShowSaleReporting(SaleDetailsDto sale)
+        {
+            ReportedSale = sale;
+        }
+
         public bool ShowSaleDetails(
             SaleDetailsDto sale,
             CancellationToken cancellationToken = default)
@@ -104,7 +147,7 @@ public sealed class SaleDetailsDialogViewModelTests
             long saleId,
             decimal outstandingAmount,
             CancellationToken cancellationToken = default)
-            => null;
+            => DebtPaymentResult;
 
         public bool ConfirmReopen(SalesHistoryItemDto sale) => false;
     }

@@ -1,0 +1,25 @@
+<Window x:Class="StorePos.Desktop.Reporting.Views.PrintPreviewWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="ბეჭდვის გადახედვა"
+        Width="1050" Height="850"
+        MinWidth="760" MinHeight="600"
+        WindowStartupLocation="CenterOwner"
+        ShowInTaskbar="False">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+        <DocumentViewer Document="{Binding Document}" />
+        <DockPanel Grid.Row="1" Margin="12">
+            <TextBlock VerticalAlignment="Center" Foreground="#B42318"
+                       Text="{Binding ErrorMessage}" TextWrapping="Wrap" />
+            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                <Button MinWidth="120" Margin="0,0,8,0" Padding="12,6"
+                        Command="{Binding PrintCommand}" Content="ბეჭდვა" />
+                <Button MinWidth="90" Padding="12,6" IsCancel="True" Content="დახურვა" />
+            </StackPanel>
+        </DockPanel>
+    </Grid>
+</Window>

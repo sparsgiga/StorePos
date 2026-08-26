@@ -53,6 +53,8 @@ public sealed class SaleDetailsDialogViewModel : ObservableObject
             },
             () => !string.IsNullOrWhiteSpace(SaleNumber));
         _payDebtCommand = new RelayCommand(PayDebt, CanPayDebt);
+        PrintCommand = new RelayCommand(
+            () => _dialogService.ShowSaleReporting(CreateCurrentSnapshot()));
     }
 
     public long Id { get; }
@@ -108,6 +110,8 @@ public sealed class SaleDetailsDialogViewModel : ObservableObject
 
     public ICommand PayDebtCommand => _payDebtCommand;
 
+    public ICommand PrintCommand { get; }
+
     private bool CanPayDebt() => Status == 2 && HasDebt && OutstandingAmount > 0;
 
     private void PayDebt()
@@ -128,6 +132,26 @@ public sealed class SaleDetailsDialogViewModel : ObservableObject
         _currentPaymentGroup.Payments.Add(result.Payment);
         HasFinancialChanges = true;
     }
+
+    private SaleDetailsDto CreateCurrentSnapshot()
+        => new(
+            Id,
+            SaleNumber,
+            Status,
+            CompletionVersion,
+            CustomerId,
+            CustomerName,
+            CustomerIdentificationNumber,
+            Comment,
+            TotalAmount,
+            PaidAmount,
+            OutstandingAmount,
+            HasDebt,
+            DateCreated,
+            DateCompleted,
+            DateCancelled,
+            Items,
+            Payments.ToArray());
 
     private readonly SalePaymentDisplayGroup _currentPaymentGroup;
 

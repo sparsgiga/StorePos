@@ -18,6 +18,8 @@ public interface ISalesDialogService
         SaleTabViewModel sale,
         CancellationToken cancellationToken = default);
 
+    void ShowSaleReporting(SaleTabViewModel sale);
+
     bool ConfirmRemoveItem(string productName);
 
     bool ConfirmCancelSale(string saleNumber, decimal totalAmount);

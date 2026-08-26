@@ -23,6 +23,7 @@ public sealed class SalesWorkspaceViewModel : ObservableObject, IDisposable
     private readonly RelayCommand _editCustomerCommand;
     private readonly RelayCommand _editSelectedItemCommand;
     private readonly RelayCommand _completeSaleCommand;
+    private readonly RelayCommand _printSaleCommand;
     private CancellationTokenSource? _detailsCancellation;
     private CancellationTokenSource? _catalogDefaultsCancellation;
     private SaleTabViewModel? _selectedSale;
@@ -53,6 +54,7 @@ public sealed class SalesWorkspaceViewModel : ObservableObject, IDisposable
         _editCustomerCommand = new RelayCommand(EditCustomer, CanEditCustomer);
         _editSelectedItemCommand = new RelayCommand(EditSelectedItem, CanModifySelectedItem);
         _completeSaleCommand = new RelayCommand(CompleteSale, CanCompleteSale);
+        _printSaleCommand = new RelayCommand(PrintSale, CanPrintSale);
     }
 
     public event EventHandler? ProductNameFocusRequested;
@@ -123,6 +125,8 @@ public sealed class SalesWorkspaceViewModel : ObservableObject, IDisposable
     public ICommand CompleteSaleCommand => _completeSaleCommand;
 
     public ICommand CancelSaleCommand => _cancelSaleCommand;
+
+    public ICommand PrintSaleCommand => _printSaleCommand;
 
     public async Task InitializeAsync()
     {
@@ -432,6 +436,14 @@ public sealed class SalesWorkspaceViewModel : ObservableObject, IDisposable
         ErrorMessage = null;
     }
 
+    private void PrintSale()
+    {
+        if (SelectedSale is { } sale)
+        {
+            _dialogService.ShowSaleReporting(sale);
+        }
+    }
+
     private async Task CancelSaleAsync()
     {
         var sale = SelectedSale;
@@ -501,6 +513,9 @@ public sealed class SalesWorkspaceViewModel : ObservableObject, IDisposable
                 details.Comment,
                 details.Items.Select(Map),
                 details.CompletionVersion,
+                details.PaidAmount,
+                details.OutstandingAmount,
+                details.HasDebt,
                 details.PreviousCompletionPaymentState);
             ErrorMessage = null;
         }
@@ -544,6 +559,11 @@ public sealed class SalesWorkspaceViewModel : ObservableObject, IDisposable
 
     private bool CanCancelSale()
         => !IsBusy && SelectedSale?.IsDetailsLoaded == true;
+
+    private bool CanPrintSale()
+        => !IsBusy &&
+           SelectedSale?.IsDetailsLoaded == true &&
+           SelectedSale.Items.Count > 0;
 
     private void OnManualItemInputPropertyChanged(
         object? sender,
@@ -617,6 +637,7 @@ public sealed class SalesWorkspaceViewModel : ObservableObject, IDisposable
         _removeSelectedItemCommand.NotifyCanExecuteChanged();
         _completeSaleCommand.NotifyCanExecuteChanged();
         _cancelSaleCommand.NotifyCanExecuteChanged();
+        _printSaleCommand.NotifyCanExecuteChanged();
     }
 
     private void RemoveOpenSale(SaleTabViewModel sale)

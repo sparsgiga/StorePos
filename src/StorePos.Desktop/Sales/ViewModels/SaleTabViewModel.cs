@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using StorePos.Desktop.Common;
 using StorePos.Desktop.Sales.Models;
+using StorePos.Desktop.Sales.Calculations;
 
 namespace StorePos.Desktop.Sales.ViewModels;
 
@@ -12,6 +13,9 @@ public sealed class SaleTabViewModel : ObservableObject
     private string? _customerIdentificationNumber;
     private string? _comment;
     private int _completionVersion;
+    private decimal _paidAmount;
+    private decimal _outstandingAmount;
+    private bool _hasDebt;
     private PreviousCompletionPaymentStateDto? _previousCompletionPaymentState;
 
     public SaleTabViewModel(
@@ -80,6 +84,24 @@ public sealed class SaleTabViewModel : ObservableObject
         private set => SetProperty(ref _completionVersion, value);
     }
 
+    public decimal PaidAmount
+    {
+        get => _paidAmount;
+        private set => SetProperty(ref _paidAmount, value);
+    }
+
+    public decimal OutstandingAmount
+    {
+        get => _outstandingAmount;
+        private set => SetProperty(ref _outstandingAmount, value);
+    }
+
+    public bool HasDebt
+    {
+        get => _hasDebt;
+        private set => SetProperty(ref _hasDebt, value);
+    }
+
     public PreviousCompletionPaymentStateDto? PreviousCompletionPaymentState
     {
         get => _previousCompletionPaymentState;
@@ -96,6 +118,9 @@ public sealed class SaleTabViewModel : ObservableObject
         string? comment,
         IEnumerable<SaleItemViewModel> items,
         int completionVersion,
+        decimal paidAmount,
+        decimal outstandingAmount,
+        bool hasDebt,
         PreviousCompletionPaymentStateDto? previousCompletionPaymentState)
     {
         Items.Clear();
@@ -110,6 +135,9 @@ public sealed class SaleTabViewModel : ObservableObject
         CustomerIdentificationNumber = customerIdentificationNumber;
         Comment = comment;
         CompletionVersion = completionVersion;
+        PaidAmount = paidAmount;
+        OutstandingAmount = outstandingAmount;
+        HasDebt = hasDebt;
         PreviousCompletionPaymentState = previousCompletionPaymentState;
         IsDetailsLoaded = true;
     }
@@ -129,7 +157,7 @@ public sealed class SaleTabViewModel : ObservableObject
     public void AddItem(SaleItemViewModel item, decimal totalAmount)
     {
         Items.Add(item);
-        TotalAmount = totalAmount;
+        ApplyTotalAmount(totalAmount);
         IsDetailsLoaded = true;
     }
 
@@ -150,7 +178,7 @@ public sealed class SaleTabViewModel : ObservableObject
                 item.Comment);
         }
 
-        TotalAmount = totalAmount;
+        ApplyTotalAmount(totalAmount);
         IsDetailsLoaded = true;
     }
 
@@ -165,13 +193,30 @@ public sealed class SaleTabViewModel : ObservableObject
     {
         var item = Items.Single(existingItem => existingItem.Id == saleItemId);
         item.ApplyUpdate(productName, quantity, unitPrice, lineTotal, comment);
-        TotalAmount = totalAmount;
+        ApplyTotalAmount(totalAmount);
     }
 
     public void ApplyItemRemoval(long saleItemId, decimal totalAmount)
     {
         var item = Items.Single(existingItem => existingItem.Id == saleItemId);
         Items.Remove(item);
+        ApplyTotalAmount(totalAmount);
+    }
+
+    private void ApplyTotalAmount(decimal totalAmount)
+    {
         TotalAmount = totalAmount;
+        if (CompletionVersion == 0)
+        {
+            PaidAmount = 0m;
+            OutstandingAmount = 0m;
+            HasDebt = false;
+            return;
+        }
+
+        OutstandingAmount = Math.Max(
+            FinancialInputPrecision.RoundMoney(TotalAmount - PaidAmount),
+            0m);
+        HasDebt = OutstandingAmount > 0;
     }
 }

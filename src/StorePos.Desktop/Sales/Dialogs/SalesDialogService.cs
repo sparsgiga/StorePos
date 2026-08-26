@@ -1,12 +1,16 @@
 using System.Windows;
 using StorePos.Desktop.Api;
+using StorePos.Desktop.Reporting;
+using StorePos.Desktop.Reporting.Services;
 using StorePos.Desktop.Sales.Models;
 using StorePos.Desktop.Sales.ViewModels;
 using StorePos.Desktop.Sales.Views;
 
 namespace StorePos.Desktop.Sales.Dialogs;
 
-public sealed class SalesDialogService(IStorePosApiClient apiClient) : ISalesDialogService
+public sealed class SalesDialogService(
+    IStorePosApiClient apiClient,
+    ISaleReportingService reportingService) : ISalesDialogService
 {
     public CustomerDialogResult? ShowCustomerInfo(
         SaleTabViewModel sale,
@@ -65,6 +69,10 @@ public sealed class SalesDialogService(IStorePosApiClient apiClient) : ISalesDia
 
         return dialog.ShowDialog() == true ? viewModel.Result : null;
     }
+
+    public void ShowSaleReporting(SaleTabViewModel sale)
+        => reportingService.ShowOptions(
+            SaleReportModelFactory.FromCurrentSale(sale, DateTime.Now));
 
     public bool ConfirmRemoveItem(string productName)
         => MessageBox.Show(
