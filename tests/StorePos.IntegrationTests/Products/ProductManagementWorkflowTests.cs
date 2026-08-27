@@ -30,6 +30,9 @@ public sealed class ProductManagementWorkflowTests
         await context.Products.AddRangeAsync(
             Product.Create("101", "100", "Alpha one", piece.Id, 10m),
             Product.Create("102", "200", "Alpha two", piece.Id, 20m),
+            Product.Create(
+                "104", "400", "Zero price", piece.Id, 0m,
+                "Supplier Alpha", "00077", 0.06m),
             inactive);
         await context.SaveChangesAsync();
         var service = new ProductManagementReadService(context);
@@ -52,12 +55,19 @@ public sealed class ProductManagementWorkflowTests
             Search: "103", Status: ProductStatusFilter.Inactive));
         var byBarcode = await service.GetListAsync(new GetProductsQuery(
             Search: "300", Status: ProductStatusFilter.All));
+        var bySupplier = await service.GetListAsync(new GetProductsQuery(
+            Search: "00077", Status: ProductStatusFilter.Active));
 
         Assert.Equal(2, firstPage.TotalCount);
         Assert.Equal("101", Assert.Single(firstPage.Items).Code);
         Assert.Equal("102", Assert.Single(secondPage.Items).Code);
         Assert.Equal(inactive.Id, Assert.Single(byCode.Items).Id);
         Assert.Equal(inactive.Id, Assert.Single(byBarcode.Items).Id);
+        var supplierProduct = Assert.Single(bySupplier.Items);
+        Assert.Equal("Supplier Alpha", supplierProduct.SupplierName);
+        Assert.Equal("00077", supplierProduct.SupplierCode);
+        Assert.Equal(0.06m, supplierProduct.CostPrice);
+        Assert.Equal(0m, supplierProduct.Price);
     }
 
     [Fact]

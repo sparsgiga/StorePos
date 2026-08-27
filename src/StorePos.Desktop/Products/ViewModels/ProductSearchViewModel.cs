@@ -255,6 +255,15 @@ public sealed class ProductSearchViewModel : ObservableObject, IDisposable
 
     private async Task AddProductAsync(ProductSearchResultDto product)
     {
+        if (product.Price <= 0)
+        {
+            ErrorOccurred?.Invoke(
+                this,
+                new ProductSearchErrorEventArgs(
+                    "პროდუქტს საცალო ფასი არ აქვს მითითებული. გაყიდვამდე მიუთითეთ ფასი."));
+            return;
+        }
+
         var saleId = _getSaleId();
         if (!saleId.HasValue)
         {
@@ -278,6 +287,10 @@ public sealed class ProductSearchViewModel : ObservableObject, IDisposable
         }
         catch (OperationCanceledException) when (_lifetimeCancellation.IsCancellationRequested)
         {
+        }
+        catch (ProductConflictException exception)
+        {
+            ErrorOccurred?.Invoke(this, new ProductSearchErrorEventArgs(exception.Message, exception));
         }
         catch (Exception exception)
         {

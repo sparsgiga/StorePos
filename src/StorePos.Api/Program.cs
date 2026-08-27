@@ -14,6 +14,11 @@ builder.Services.AddControllers();
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<ApiExceptionHandler>();
 
+builder.Host.UseWindowsService(options =>
+{
+    options.ServiceName = "StorePosApi";
+});
+
 var app = builder.Build();
 
 await app.Services.ApplyDatabaseMigrationsAsync();

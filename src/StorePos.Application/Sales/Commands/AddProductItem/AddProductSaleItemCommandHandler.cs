@@ -1,4 +1,5 @@
 using MediatR;
+using StorePos.Application.Common.Exceptions;
 using StorePos.Domain.Aggregates.MeasurementUnit;
 using StorePos.Domain.Aggregates.Product;
 using StorePos.Domain.Aggregates.Sale;
@@ -31,6 +32,11 @@ public sealed class AddProductSaleItemCommandHandler(
         if (product is null)
         {
             return null;
+        }
+
+        if (product.Price <= 0)
+        {
+            throw new ProductRetailPriceNotSetException(product.Name);
         }
 
         var measurementUnit = await measurementUnitRepository.GetByIdAsync(

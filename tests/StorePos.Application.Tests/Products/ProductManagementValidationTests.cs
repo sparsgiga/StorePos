@@ -7,27 +7,25 @@ namespace StorePos.Application.Tests.Products;
 public sealed class ProductManagementValidationTests
 {
     [Fact]
-    public void Create_RequiresBarcodeAndPositivePrice()
+    public void Create_AllowsMissingBarcodeAndZeroPrice()
     {
         var validator = new CreateProductCommandValidator();
 
         var result = validator.Validate(new CreateProductCommand(
             "100", "", "Product", 1, 0m));
 
-        Assert.Contains(result.Errors, error => error.PropertyName == "Barcode");
-        Assert.Contains(result.Errors, error => error.PropertyName == "Price");
+        Assert.True(result.IsValid);
     }
 
     [Fact]
-    public void Update_RequiresNumericCodeAndBarcode()
+    public void Update_AllowsFlexibleCodeAndMissingBarcode()
     {
         var validator = new UpdateProductCommandValidator();
 
         var result = validator.Validate(new UpdateProductCommand(
             1, "A-1", "", "Product", 1, 1m));
 
-        Assert.Contains(result.Errors, error => error.PropertyName == "Code");
-        Assert.Contains(result.Errors, error => error.PropertyName == "Barcode");
+        Assert.True(result.IsValid);
     }
 
     [Fact]

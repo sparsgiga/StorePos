@@ -298,6 +298,10 @@ namespace StorePos.Persistence.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
+                    b.Property<decimal?>("CostPrice")
+                        .HasPrecision(18, 5)
+                        .HasColumnType("decimal(18,5)");
+
                     b.Property<DateTime>("DateCreated")
                         .HasColumnType("datetime2");
 
@@ -320,6 +324,14 @@ namespace StorePos.Persistence.Migrations
                         .HasPrecision(18, 5)
                         .HasColumnType("decimal(18,5)");
 
+                    b.Property<string>("SupplierCode")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("SupplierName")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
                     b.HasKey("Id");
 
                     b.HasIndex("Barcode")
@@ -335,7 +347,12 @@ namespace StorePos.Persistence.Migrations
 
                     b.HasIndex("Name");
 
-                    b.ToTable("Products", "dbo");
+                    b.ToTable("Products", "dbo", t =>
+                        {
+                            t.HasCheckConstraint("CK_Products_CostPrice_NonNegative", "[CostPrice] IS NULL OR [CostPrice] >= 0");
+
+                            t.HasCheckConstraint("CK_Products_Price_NonNegative", "[Price] >= 0");
+                        });
                 });
 
             modelBuilder.Entity("StorePos.Domain.Aggregates.Sale.Sale", b =>

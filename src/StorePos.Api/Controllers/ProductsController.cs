@@ -62,7 +62,10 @@ public sealed class ProductsController(ISender sender) : ControllerBase
                 request.Barcode,
                 request.Name,
                 request.MeasurementUnitId,
-                request.Price),
+                request.Price,
+                request.SupplierName,
+                request.SupplierCode,
+                request.CostPrice),
             cancellationToken);
         return CreatedAtAction(nameof(GetById), new { productId = result.Id }, result);
     }
@@ -80,7 +83,10 @@ public sealed class ProductsController(ISender sender) : ControllerBase
                 request.Barcode,
                 request.Name,
                 request.MeasurementUnitId,
-                request.Price),
+                request.Price,
+                request.SupplierName,
+                request.SupplierCode,
+                request.CostPrice),
             cancellationToken);
         return result is null ? NotFound() : Ok(result);
     }

@@ -9,7 +9,10 @@ public sealed record ProductListItemDto(
     string MeasurementUnitName,
     string? MeasurementUnitShortName,
     decimal Price,
-    bool IsActive)
+    bool IsActive,
+    string? SupplierName = null,
+    string? SupplierCode = null,
+    decimal? CostPrice = null)
 {
     public string UnitDisplayName => string.IsNullOrWhiteSpace(MeasurementUnitShortName)
         ? MeasurementUnitName
@@ -27,7 +30,10 @@ public sealed record ProductDetailsDto(
     string MeasurementUnitName,
     string? MeasurementUnitShortName,
     decimal Price,
-    bool IsActive);
+    bool IsActive,
+    string? SupplierName = null,
+    string? SupplierCode = null,
+    decimal? CostPrice = null);
 
 public sealed record ProductMutationDto(
     long Id,
@@ -36,14 +42,20 @@ public sealed record ProductMutationDto(
     string Name,
     int MeasurementUnitId,
     decimal Price,
-    bool IsActive);
+    bool IsActive,
+    string? SupplierName = null,
+    string? SupplierCode = null,
+    decimal? CostPrice = null);
 
 public sealed record SaveProductRequest(
     string Code,
-    string Barcode,
+    string? Barcode,
     string Name,
     int MeasurementUnitId,
-    decimal Price);
+    decimal Price,
+    string? SupplierName = null,
+    string? SupplierCode = null,
+    decimal? CostPrice = null);
 
 public sealed record ProductListFilter(
     string? Search,

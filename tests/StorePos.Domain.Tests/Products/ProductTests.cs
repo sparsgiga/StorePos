@@ -37,11 +37,16 @@ public sealed class ProductTests
 
     [Theory]
     [InlineData("PRD-1")]
-    [InlineData("12 34")]
-    [InlineData("１２３")]
-    public void Create_NonnumericCode_Throws(string code)
-        => Assert.Throws<ArgumentException>(() =>
-            Product.Create(code, null, "Product", 1, 1m));
+    [InlineData("12.01კოდი")]
+    [InlineData("GMTEK-40012")]
+    [InlineData("A-100/5")]
+    public void Create_FlexibleCode_PreservesIdentifier(string code)
+    {
+        var product = Product.Create(code, null, "Product", 1, 0m);
+
+        Assert.Equal(code, product.Code);
+        Assert.Equal(0m, product.Price);
+    }
 
     [Fact]
     public void UpdateDetails_NormalizesAllFieldsAndPrice()
@@ -58,12 +63,13 @@ public sealed class ProductTests
     }
 
     [Fact]
-    public void UpdateDetails_RequiresBarcode()
+    public void UpdateDetails_AllowsMissingBarcode()
     {
         var product = Product.Create("100", null, "Legacy", 1, 1m);
 
-        Assert.Throws<ArgumentException>(() =>
-            product.UpdateDetails("100", " ", "Legacy", 1, 1m));
+        product.UpdateDetails("100", " ", "Legacy", 1, 1m);
+
+        Assert.Null(product.Barcode);
     }
 
     [Fact]
@@ -78,7 +84,38 @@ public sealed class ProductTests
     }
 
     [Fact]
-    public void Create_PriceThatRoundsToZeroIsRejected()
+    public void Create_PriceThatRoundsToZeroIsAccepted()
+    {
+        var product = Product.Create("100", "111", "Product", 1, 0.000001m);
+
+        Assert.Equal(0m, product.Price);
+    }
+
+    public static TheoryData<decimal?> ValidCostPrices => new()
+    {
+        null,
+        0m,
+        0.06m
+    };
+
+    [Theory]
+    [MemberData(nameof(ValidCostPrices))]
+    public void Create_AllowsOptionalNonNegativeCostPrice(decimal? costPrice)
+    {
+        var product = Product.Create(
+            "100", null, "Product", 1, 0m, "Supplier", "00077", costPrice);
+
+        Assert.Equal("00077", product.SupplierCode);
+        Assert.Equal(costPrice, product.CostPrice);
+    }
+
+    [Fact]
+    public void Create_NegativeCostPrice_Throws()
         => Assert.Throws<ArgumentOutOfRangeException>(() =>
-            Product.Create("100", "111", "Product", 1, 0.000001m));
+            Product.Create("100", null, "Product", 1, 0m, costPrice: -0.01m));
+
+    [Fact]
+    public void Create_CodeAboveMaximumLength_Throws()
+        => Assert.Throws<ArgumentException>(() =>
+            Product.Create(new string('A', Product.CodeMaxLength + 1), null, "Product", 1, 0m));
 }

@@ -32,7 +32,7 @@
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
 
-                <TextBlock Grid.Row="0" Grid.Column="0" Text="ძებნა — დასახელება, კოდი ან შტრიხკოდი" />
+                <TextBlock Grid.Row="0" Grid.Column="0" Text="ძებნა — დასახელება, კოდი, შტრიხკოდი ან მომწოდებელი" />
                 <TextBlock Grid.Row="0" Grid.Column="1" Margin="8,0,0,0" Text="სტატუსი" />
                 <TextBlock Grid.Row="0" Grid.Column="2" Margin="8,0,0,0" Text="ერთეული" />
                 <TextBlock Grid.Row="0" Grid.Column="3" Margin="8,0,0,0" Text="ფასი დან" />
@@ -90,9 +90,13 @@
             <DataGrid.Columns>
                 <DataGridTextColumn Width="110" Header="კოდი" Binding="{Binding Code}" />
                 <DataGridTextColumn Width="160" Header="შტრიხკოდი" Binding="{Binding Barcode}" />
-                <DataGridTextColumn Width="*" Header="დასახელება" Binding="{Binding Name}" />
+                <DataGridTextColumn Width="280" Header="დასახელება" Binding="{Binding Name}" />
                 <DataGridTextColumn Width="180" Header="ერთეული" Binding="{Binding UnitDisplayName}" />
-                <DataGridTextColumn Width="110" Header="ფასი"
+                <DataGridTextColumn Width="180" Header="გამყიდველი" Binding="{Binding SupplierName}" />
+                <DataGridTextColumn Width="150" Header="მომწოდებლის კოდი" Binding="{Binding SupplierCode}" />
+                <DataGridTextColumn Width="125" Header="პირველადი ფასი"
+                                    Binding="{Binding CostPrice, Converter={StaticResource DecimalDisplayConverter}}" />
+                <DataGridTextColumn Width="125" Header="საცალო ფასი"
                                     Binding="{Binding Price, Converter={StaticResource DecimalDisplayConverter}}" />
                 <DataGridTextColumn Width="110" Header="სტატუსი" Binding="{Binding StatusName}" />
             </DataGrid.Columns>

@@ -5,10 +5,12 @@ namespace StorePos.Domain.Aggregates.Product;
 
 public sealed class Product : AuditableEntity<long>, IAggregateRoot
 {
-    public const decimal MinimumPrice = 0.00001m;
+    public const decimal MinimumPrice = 0m;
     public const int CodeMaxLength = 50;
     public const int BarcodeMaxLength = 100;
     public const int NameMaxLength = 300;
+    public const int SupplierNameMaxLength = 300;
+    public const int SupplierCodeMaxLength = 100;
 
     private Product()
     {
@@ -19,9 +21,20 @@ public sealed class Product : AuditableEntity<long>, IAggregateRoot
         string? barcode,
         string name,
         int measurementUnitId,
-        decimal price)
+        decimal price,
+        string? supplierName,
+        string? supplierCode,
+        decimal? costPrice)
     {
-        ApplyDetails(code, barcode, name, measurementUnitId, price, requireBarcode: false);
+        ApplyDetails(
+            code,
+            barcode,
+            name,
+            measurementUnitId,
+            price,
+            supplierName,
+            supplierCode,
+            costPrice);
         IsActive = true;
     }
 
@@ -35,6 +48,12 @@ public sealed class Product : AuditableEntity<long>, IAggregateRoot
 
     public decimal Price { get; private set; }
 
+    public string? SupplierName { get; private set; }
+
+    public string? SupplierCode { get; private set; }
+
+    public decimal? CostPrice { get; private set; }
+
     public bool IsActive { get; private set; }
 
     public static Product Create(
@@ -42,16 +61,38 @@ public sealed class Product : AuditableEntity<long>, IAggregateRoot
         string? barcode,
         string name,
         int measurementUnitId,
-        decimal price)
-        => new(code, barcode, name, measurementUnitId, price);
+        decimal price,
+        string? supplierName = null,
+        string? supplierCode = null,
+        decimal? costPrice = null)
+        => new(
+            code,
+            barcode,
+            name,
+            measurementUnitId,
+            price,
+            supplierName,
+            supplierCode,
+            costPrice);
 
     public void UpdateDetails(
         string code,
-        string barcode,
+        string? barcode,
         string name,
         int measurementUnitId,
-        decimal price)
-        => ApplyDetails(code, barcode, name, measurementUnitId, price, requireBarcode: true);
+        decimal price,
+        string? supplierName = null,
+        string? supplierCode = null,
+        decimal? costPrice = null)
+        => ApplyDetails(
+            code,
+            barcode,
+            name,
+            measurementUnitId,
+            price,
+            supplierName,
+            supplierCode,
+            costPrice);
 
     public void Activate() => IsActive = true;
 
@@ -63,11 +104,19 @@ public sealed class Product : AuditableEntity<long>, IAggregateRoot
         string name,
         int measurementUnitId,
         decimal price,
-        bool requireBarcode)
+        string? supplierName,
+        string? supplierCode,
+        decimal? costPrice)
     {
         var normalizedCode = code?.Trim();
         var normalizedBarcode = string.IsNullOrWhiteSpace(barcode) ? null : barcode.Trim();
         var normalizedName = name?.Trim();
+        var normalizedSupplierName = string.IsNullOrWhiteSpace(supplierName)
+            ? null
+            : supplierName.Trim();
+        var normalizedSupplierCode = string.IsNullOrWhiteSpace(supplierCode)
+            ? null
+            : supplierCode.Trim();
 
         if (string.IsNullOrWhiteSpace(normalizedCode))
         {
@@ -81,13 +130,6 @@ public sealed class Product : AuditableEntity<long>, IAggregateRoot
                 nameof(code));
         }
 
-        if (normalizedCode.Any(character => character is < '0' or > '9'))
-        {
-            throw new ArgumentException(
-                "Product code must contain ASCII digits only.",
-                nameof(code));
-        }
-
         if (normalizedBarcode?.Length > BarcodeMaxLength)
         {
             throw new ArgumentException(
@@ -95,9 +137,18 @@ public sealed class Product : AuditableEntity<long>, IAggregateRoot
                 nameof(barcode));
         }
 
-        if (requireBarcode && normalizedBarcode is null)
+        if (normalizedSupplierName?.Length > SupplierNameMaxLength)
         {
-            throw new ArgumentException("Product barcode is required.", nameof(barcode));
+            throw new ArgumentException(
+                $"Supplier name cannot exceed {SupplierNameMaxLength} characters.",
+                nameof(supplierName));
+        }
+
+        if (normalizedSupplierCode?.Length > SupplierCodeMaxLength)
+        {
+            throw new ArgumentException(
+                $"Supplier code cannot exceed {SupplierCodeMaxLength} characters.",
+                nameof(supplierCode));
         }
 
         if (string.IsNullOrWhiteSpace(normalizedName))
@@ -123,10 +174,26 @@ public sealed class Product : AuditableEntity<long>, IAggregateRoot
                 $"Price must be at least {MinimumPrice}.");
         }
 
+        decimal? normalizedCostPrice = null;
+        if (costPrice.HasValue)
+        {
+            normalizedCostPrice = FinancialPrecision.RoundUnitPrice(costPrice.Value);
+            if (normalizedCostPrice < 0 ||
+                normalizedCostPrice > FinancialPrecision.MaximumFiveScaleValue)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(costPrice),
+                    "Cost price cannot be negative or exceed the supported range.");
+            }
+        }
+
         Code = normalizedCode;
         Barcode = normalizedBarcode;
         Name = normalizedName;
         MeasurementUnitId = measurementUnitId;
         Price = normalizedPrice;
+        SupplierName = normalizedSupplierName;
+        SupplierCode = normalizedSupplierCode;
+        CostPrice = normalizedCostPrice;
     }
 }

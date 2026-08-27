@@ -116,6 +116,34 @@ public sealed class ProductCatalogWorkflowTests
     }
 
     [Fact]
+    public async Task AddZeroPriceCatalogProduct_IsBlockedBeforeSaleItemIsCreated()
+    {
+        await using var context = CreateContext();
+        var unit = MeasurementUnit.Create("Piece", "pc");
+        var sale = Sale.Create("20260827-0001");
+        await context.MeasurementUnits.AddAsync(unit);
+        await context.SaveChangesAsync();
+        var product = Product.Create("ZERO", "00077", "Zero price product", unit.Id, 0m);
+        await context.Products.AddAsync(product);
+        await context.Sales.AddAsync(sale);
+        await context.SaveChangesAsync();
+        var handler = new AddProductSaleItemCommandHandler(
+            new SaleRepository(context),
+            new ProductRepository(context),
+            new MeasurementUnitRepository(context),
+            new UnitOfWork(context));
+
+        var exception = await Assert.ThrowsAsync<ProductRetailPriceNotSetException>(() =>
+            handler.Handle(
+                new AddProductSaleItemCommand(sale.Id, product.Id),
+                CancellationToken.None));
+
+        Assert.Contains("საცალო ფასი", exception.Message);
+        Assert.Empty(await context.SaleItems.ToArrayAsync());
+        Assert.Empty(sale.Items);
+    }
+
+    [Fact]
     public async Task CreationDefaults_UseMaximumNumericCodeAndSemanticUnitWithoutHardcodedId()
     {
         await using var context = CreateContext();

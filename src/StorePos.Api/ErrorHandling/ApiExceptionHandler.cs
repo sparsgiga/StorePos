@@ -39,6 +39,12 @@ public sealed class ApiExceptionHandler(ILogger<ApiExceptionHandler> logger)
                 Title = "Measurement unit is unavailable",
                 Detail = "არჩეული საზომი ერთეული არ არსებობს ან არააქტიურია."
             },
+            ProductRetailPriceNotSetException conflict => new ProblemDetails
+            {
+                Status = StatusCodes.Status409Conflict,
+                Title = "Product retail price is not set",
+                Detail = conflict.Message
+            },
             SaleOperationConflictException conflict => new ProblemDetails
             {
                 Status = StatusCodes.Status409Conflict,

@@ -22,7 +22,9 @@ public sealed class UpdateProductCommandHandler(
         }
 
         var code = request.Code.Trim();
-        var barcode = request.Barcode.Trim();
+        var barcode = string.IsNullOrWhiteSpace(request.Barcode)
+            ? null
+            : request.Barcode.Trim();
         if (await productRepository.CodeExistsAsync(
                 code,
                 product.Id,
@@ -31,7 +33,8 @@ public sealed class UpdateProductCommandHandler(
             throw new ProductCodeConflictException(code);
         }
 
-        if (await productRepository.BarcodeExistsAsync(
+        if (barcode is not null &&
+            await productRepository.BarcodeExistsAsync(
                 barcode,
                 product.Id,
                 cancellationToken))
@@ -51,7 +54,10 @@ public sealed class UpdateProductCommandHandler(
             barcode,
             request.Name,
             request.MeasurementUnitId,
-            request.Price);
+            request.Price,
+            request.SupplierName,
+            request.SupplierCode,
+            request.CostPrice);
         await unitOfWork.SaveChangesAsync(cancellationToken);
         return product.ToResult();
     }

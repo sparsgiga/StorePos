@@ -1,5 +1,6 @@
 using System.IO.Compression;
 using System.Text;
+using System.Xml.Linq;
 using StorePos.Desktop.Reporting.Excel;
 using StorePos.Desktop.Reporting.Models;
 
@@ -28,6 +29,32 @@ public sealed class SaleExcelExporterTests
         Assert.Contains("700", sheet);
         Assert.Contains("300", sheet);
         Assert.Equal(1, CountOccurrences(sheet, "Snapshot Product"));
+
+        var document = XDocument.Parse(sheet);
+        XNamespace spreadsheet = "http://schemas.openxmlformats.org/spreadsheetml/2006/main";
+        var rows = document.Descendants(spreadsheet + "row")
+            .ToDictionary(row => (string)row.Attribute("r")!);
+
+        Assert.Equal("გაყიდვა", CellText(rows["2"], spreadsheet, "A2"));
+        Assert.Equal(report.SaleNumber, CellText(rows["2"], spreadsheet, "B2"));
+        Assert.Equal("სტატუსი", CellText(rows["2"], spreadsheet, "C2"));
+        Assert.Equal(report.CustomerName, CellText(rows["2"], spreadsheet, "F2"));
+        Assert.Equal(report.CustomerIdentificationNumber, CellText(rows["2"], spreadsheet, "H2"));
+        Assert.Equal("შექმნილია", CellText(rows["3"], spreadsheet, "A3"));
+        Assert.Equal("დაბეჭდილია", CellText(rows["3"], spreadsheet, "E3"));
+
+        Assert.Equal("კოდი", CellText(rows["4"], spreadsheet, "A4"));
+        Assert.Equal("პროდუქტი", CellText(rows["4"], spreadsheet, "C4"));
+        Assert.Equal("P1", CellText(rows["5"], spreadsheet, "A5"));
+        Assert.Equal("123", CellText(rows["5"], spreadsheet, "B5"));
+        Assert.Equal("Snapshot Product", CellText(rows["5"], spreadsheet, "C5"));
+        Assert.Equal("Long comment", CellText(rows["5"], spreadsheet, "H5"));
+
+        var pane = Assert.Single(document.Descendants(spreadsheet + "pane"));
+        Assert.Equal("4", (string?)pane.Attribute("ySplit"));
+        Assert.Equal("A5", (string?)pane.Attribute("topLeftCell"));
+        var autoFilter = Assert.Single(document.Descendants(spreadsheet + "autoFilter"));
+        Assert.Equal("A4:H5", (string?)autoFilter.Attribute("ref"));
     }
 
     [Fact]
@@ -71,4 +98,11 @@ public sealed class SaleExcelExporterTests
 
     private static int CountOccurrences(string value, string search)
         => (value.Length - value.Replace(search, string.Empty).Length) / search.Length;
+
+    private static string? CellText(XElement row, XNamespace spreadsheet, string reference)
+        => row.Elements(spreadsheet + "c")
+            .Single(cell => (string?)cell.Attribute("r") == reference)
+            .Descendants(spreadsheet + "t")
+            .SingleOrDefault()
+            ?.Value;
 }

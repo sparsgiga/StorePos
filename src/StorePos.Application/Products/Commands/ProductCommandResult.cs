@@ -7,4 +7,7 @@ public sealed record ProductCommandResult(
     string Name,
     int MeasurementUnitId,
     decimal Price,
-    bool IsActive);
+    bool IsActive,
+    string? SupplierName = null,
+    string? SupplierCode = null,
+    decimal? CostPrice = null);

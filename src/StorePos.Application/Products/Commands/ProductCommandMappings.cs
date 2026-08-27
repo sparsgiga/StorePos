@@ -12,5 +12,8 @@ internal static class ProductCommandMappings
             product.Name,
             product.MeasurementUnitId,
             product.Price,
-            product.IsActive);
+            product.IsActive,
+            product.SupplierName,
+            product.SupplierCode,
+            product.CostPrice);
 }

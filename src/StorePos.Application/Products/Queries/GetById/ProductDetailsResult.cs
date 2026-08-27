@@ -9,4 +9,7 @@ public sealed record ProductDetailsResult(
     string MeasurementUnitName,
     string? MeasurementUnitShortName,
     decimal Price,
-    bool IsActive);
+    bool IsActive,
+    string? SupplierName = null,
+    string? SupplierCode = null,
+    decimal? CostPrice = null);

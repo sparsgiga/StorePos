@@ -33,7 +33,7 @@ public sealed class SaleItemInputViewModel : ObservableObject
 
     public SaleItemInputViewModel()
     {
-        GenerateBarcodeCommand = new RelayCommand(GenerateBarcode);
+        GenerateBarcodeCommand = new RelayCommand(GenerateBarcode, CanGenerateBarcode);
     }
 
     public ObservableCollection<MeasurementUnitDto> MeasurementUnits { get; } = [];
@@ -108,6 +108,7 @@ public sealed class SaleItemInputViewModel : ObservableObject
         {
             if (SetProperty(ref _productCode, value ?? string.Empty))
             {
+                ((RelayCommand)GenerateBarcodeCommand).NotifyCanExecuteChanged();
                 UpdateIsComplete();
             }
         }
@@ -290,7 +291,7 @@ public sealed class SaleItemInputViewModel : ObservableObject
             CatalogMessage = "ნაგულისხმევი საზომი ერთეული აქტიურ სიაში ვერ მოიძებნა.";
         }
 
-        if (string.IsNullOrWhiteSpace(Barcode))
+        if (string.IsNullOrWhiteSpace(Barcode) && CanGenerateBarcode())
         {
             GenerateBarcode(clearMessageOnSuccess: false);
         }
@@ -498,9 +499,7 @@ public sealed class SaleItemInputViewModel : ObservableObject
                      DecimalInputParser.TryParse(LineTotal, out var lineTotal) &&
                      lineTotal > 0;
         var normalizedCode = ProductCode.Trim();
-        var hasValidProductCode = normalizedCode.Length is > 0 and <= 50 &&
-                                  normalizedCode.All(character =>
-                                      character is >= '0' and <= '9');
+        var hasValidProductCode = normalizedCode.Length is > 0 and <= 50;
         var hasValidBarcode = !string.IsNullOrWhiteSpace(Barcode) &&
                               Barcode.Trim().Length <= 100;
         CanSubmit = IsComplete &&
@@ -513,6 +512,13 @@ public sealed class SaleItemInputViewModel : ObservableObject
 
     private void GenerateBarcode()
         => GenerateBarcode(clearMessageOnSuccess: true);
+
+    private bool CanGenerateBarcode()
+    {
+        var code = ProductCode.Trim();
+        return code.Length is > 0 and <= Ean13BarcodeGenerator.BodyLength &&
+               code.All(character => character is >= '0' and <= '9');
+    }
 
     private void GenerateBarcode(bool clearMessageOnSuccess)
     {

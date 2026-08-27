@@ -14,11 +14,13 @@ public sealed class UpdateProductCommandValidator : AbstractValidator<UpdateProd
             .MaximumLength(Product.NameMaxLength);
         RuleFor(command => command.Code)
             .NotEmpty().WithMessage("პროდუქტის კოდი სავალდებულოა.")
-            .MaximumLength(Product.CodeMaxLength)
-            .Matches("^[0-9]+$").WithMessage("კოდი უნდა შეიცავდეს მხოლოდ ციფრებს.");
+            .MaximumLength(Product.CodeMaxLength);
         RuleFor(command => command.Barcode)
-            .NotEmpty().WithMessage("შტრიხკოდი სავალდებულოა.")
             .MaximumLength(Product.BarcodeMaxLength);
+        RuleFor(command => command.SupplierName)
+            .MaximumLength(Product.SupplierNameMaxLength);
+        RuleFor(command => command.SupplierCode)
+            .MaximumLength(Product.SupplierCodeMaxLength);
         RuleFor(command => command.MeasurementUnitId)
             .GreaterThan(0).WithMessage("მიუთითეთ საზომი ერთეული.");
         RuleFor(command => command.Price)
@@ -28,6 +30,19 @@ public sealed class UpdateProductCommandValidator : AbstractValidator<UpdateProd
                 return normalized >= Product.MinimumPrice &&
                        normalized <= FinancialPrecision.MaximumFiveScaleValue;
             })
-            .WithMessage("ფასი უნდა იყოს ნულზე მეტი და დასაშვებ დიაპაზონში.");
+            .WithMessage("საცალო ფასი არ შეიძლება იყოს უარყოფითი ან დასაშვებ დიაპაზონს აღემატებოდეს.");
+        RuleFor(command => command.CostPrice)
+            .Must(costPrice =>
+            {
+                if (!costPrice.HasValue)
+                {
+                    return true;
+                }
+
+                var normalized = FinancialPrecision.RoundUnitPrice(costPrice.Value);
+                return normalized >= 0 &&
+                       normalized <= FinancialPrecision.MaximumFiveScaleValue;
+            })
+            .WithMessage("პირველადი ფასი არ შეიძლება იყოს უარყოფითი ან დასაშვებ დიაპაზონს აღემატებოდეს.");
     }
 }

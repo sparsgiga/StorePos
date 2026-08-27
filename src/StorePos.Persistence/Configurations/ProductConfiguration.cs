@@ -33,6 +33,15 @@ public sealed class ProductConfiguration : IEntityTypeConfiguration<Product>
             .HasPrecision(18, 5)
             .IsRequired();
 
+        builder.Property(x => x.SupplierName)
+            .HasMaxLength(Product.SupplierNameMaxLength);
+
+        builder.Property(x => x.SupplierCode)
+            .HasMaxLength(Product.SupplierCodeMaxLength);
+
+        builder.Property(x => x.CostPrice)
+            .HasPrecision(18, 5);
+
         builder.Property(x => x.IsActive).IsRequired();
         builder.Property(x => x.DateCreated).HasColumnType("datetime2").IsRequired();
         builder.Property(x => x.DateUpdated).HasColumnType("datetime2");
@@ -43,6 +52,14 @@ public sealed class ProductConfiguration : IEntityTypeConfiguration<Product>
             .HasFilter("[Barcode] IS NOT NULL");
         builder.HasIndex(x => x.Name);
         builder.HasIndex(x => x.IsActive);
+
+        builder.ToTable(table =>
+        {
+            table.HasCheckConstraint("CK_Products_Price_NonNegative", "[Price] >= 0");
+            table.HasCheckConstraint(
+                "CK_Products_CostPrice_NonNegative",
+                "[CostPrice] IS NULL OR [CostPrice] >= 0");
+        });
 
         builder.HasOne<MeasurementUnit>()
             .WithMany()

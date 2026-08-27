@@ -210,41 +210,45 @@ public sealed class SaleExcelExporter
         writer.WriteStartElement("sheetViews");
         writer.WriteStartElement("sheetView");
         writer.WriteAttributeString("workbookViewId", "0");
-        WriteEmpty(writer, "pane", ("ySplit", "10"), ("topLeftCell", "A11"),
+        WriteEmpty(writer, "pane", ("ySplit", "4"), ("topLeftCell", "A5"),
             ("activePane", "bottomLeft"), ("state", "frozen"));
         writer.WriteEndElement();
         writer.WriteEndElement();
         writer.WriteStartElement("cols");
-        WriteColumn(writer, 1, 13);
-        WriteColumn(writer, 2, 18);
-        WriteColumn(writer, 3, 38);
-        WriteColumn(writer, 4, 14);
-        WriteColumn(writer, 5, 13);
-        WriteColumn(writer, 6, 14);
-        WriteColumn(writer, 7, 15);
-        WriteColumn(writer, 8, 32);
+        WriteColumn(writer, 1, 12);
+        WriteColumn(writer, 2, 17);
+        WriteColumn(writer, 3, 42);
+        WriteColumn(writer, 4, 12);
+        WriteColumn(writer, 5, 12);
+        WriteColumn(writer, 6, 13);
+        WriteColumn(writer, 7, 14);
+        WriteColumn(writer, 8, 30);
         writer.WriteEndElement();
         writer.WriteStartElement("sheetData");
 
         WriteStringRow(writer, 1, 5, ("A", "გაყიდვის სრული ანგარიში"));
-        WriteStringRow(writer, 2, 0, ("A", "გაყიდვის ნომერი"), ("B", report.SaleNumber));
-        WriteStringRow(writer, 3, 0, ("A", "სტატუსი"), ("B", ReportFormatting.Status(report.Status)));
-        WriteStringRow(writer, 4, 0, ("A", "მყიდველი"), ("B", report.CustomerName ?? "—"));
-        WriteStringRow(writer, 5, 0, ("A", "საიდენტიფიკაციო ნომერი"), ("B", report.CustomerIdentificationNumber ?? "—"));
-        WriteStringRow(writer, 6, 0, ("A", "შექმნილია"), ("B", report.DateCreated.ToString("dd.MM.yyyy HH:mm")));
-        WriteStringRow(writer, 7, 0, ("A", "დასრულებულია"), ("B", report.DateCompleted?.ToString("dd.MM.yyyy HH:mm") ?? "—"));
-        WriteStringRow(writer, 8, 0, ("A", "დაბეჭდილია"), ("B", report.PrintedAt.ToString("dd.MM.yyyy HH:mm")));
+        WriteMetadataRow(writer, 2,
+            ("A", "გაყიდვა", "B", report.SaleNumber),
+            ("C", "სტატუსი", "D", ReportFormatting.Status(report.Status)),
+            ("E", "მყიდველი", "F", report.CustomerName ?? "—"),
+            ("G", "საიდ. №", "H", report.CustomerIdentificationNumber ?? "—"));
+        WriteMetadataRow(writer, 3,
+            ("A", "შექმნილია", "B", report.DateCreated.ToString("dd.MM.yyyy HH:mm")),
+            ("C", "დასრულებულია", "D", report.DateCompleted?.ToString("dd.MM.yyyy HH:mm") ?? "—"),
+            ("E", "დაბეჭდილია", "F", report.PrintedAt.ToString("dd.MM.yyyy HH:mm")));
 
-        WriteStringRow(writer, 10, 5,
+        WriteStringRow(writer, 4, 5,
             ("A", "კოდი"), ("B", "შტრიხკოდი"), ("C", "პროდუქტი"),
             ("D", "ერთეული"), ("E", "რაოდენობა"), ("F", "ერთ. ფასი"),
             ("G", "ჯამი"), ("H", "კომენტარი"));
 
-        var rowNumber = 11;
+        var rowNumber = 5;
         foreach (var item in report.Items)
         {
             WriteItemRow(writer, rowNumber++, item);
         }
+
+        var lastItemRow = Math.Max(4, rowNumber - 1);
 
         rowNumber++;
         WriteSummaryRow(writer, rowNumber++, "სულ", report.TotalAmount);
@@ -256,6 +260,7 @@ public sealed class SaleExcelExporter
         WriteSummaryRow(writer, rowNumber, "სხვა", report.OtherAmount);
 
         writer.WriteEndElement();
+        WriteEmpty(writer, "autoFilter", ("ref", $"A4:H{lastItemRow}"));
         writer.WriteEndElement();
         writer.WriteEndDocument();
     }
@@ -302,6 +307,21 @@ public sealed class SaleExcelExporter
         foreach (var cell in cells)
         {
             WriteInlineCell(writer, $"{cell.Column}{row}", cell.Value, style);
+        }
+        writer.WriteEndElement();
+    }
+
+    private static void WriteMetadataRow(
+        XmlWriter writer,
+        int row,
+        params (string LabelColumn, string Label, string ValueColumn, string Value)[] pairs)
+    {
+        writer.WriteStartElement("row");
+        writer.WriteAttributeString("r", row.ToString(CultureInfo.InvariantCulture));
+        foreach (var pair in pairs)
+        {
+            WriteInlineCell(writer, $"{pair.LabelColumn}{row}", pair.Label, 0);
+            WriteInlineCell(writer, $"{pair.ValueColumn}{row}", pair.Value, 4);
         }
         writer.WriteEndElement();
     }

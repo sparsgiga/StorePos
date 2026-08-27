@@ -59,7 +59,7 @@ public sealed class ProductApplicationTests
     }
 
     [Fact]
-    public void CreateProductValidator_AllowsNumericOverrideAndRejectsNonnumericCode()
+    public void CreateProductValidator_AllowsFlexibleProductCode()
     {
         var validator = new CreateProductAndAddToSaleCommandValidator();
 
@@ -71,7 +71,7 @@ public sealed class ProductApplicationTests
             24,
             1m,
             2m));
-        var invalid = validator.Validate(new CreateProductAndAddToSaleCommand(
+        var flexible = validator.Validate(new CreateProductAndAddToSaleCommand(
             1,
             "PRD-1",
             "Cement",
@@ -89,8 +89,7 @@ public sealed class ProductApplicationTests
             2m));
 
         Assert.True(valid.IsValid);
-        Assert.False(invalid.IsValid);
-        Assert.Contains(invalid.Errors, error => error.PropertyName == "ProductCode");
+        Assert.True(flexible.IsValid);
         Assert.False(missingBarcode.IsValid);
         Assert.Contains(
             missingBarcode.Errors,

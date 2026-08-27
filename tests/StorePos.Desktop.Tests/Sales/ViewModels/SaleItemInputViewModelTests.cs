@@ -131,15 +131,15 @@ public sealed class SaleItemInputViewModelTests
     }
 
     [Fact]
-    public void CreationDefaults_InvalidProductCodeDoesNotGenerateBarcode()
+    public void CreationDefaults_NonnumericProductCodeDoesNotGenerateBarcode()
     {
-        var input = new SaleItemInputViewModel { ProductCode = "1234567890123" };
+        var input = new SaleItemInputViewModel();
 
         input.ApplyCreationDefaults(new ProductCreationDefaultsDto(
-            "10525", null, null, null, null));
+            "GMTEK-40012", null, null, null, null));
 
         Assert.Null(input.Barcode);
-        Assert.NotNull(input.CatalogMessage);
+        Assert.False(input.GenerateBarcodeCommand.CanExecute(null));
     }
 
     [Fact]

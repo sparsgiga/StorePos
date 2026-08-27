@@ -31,7 +31,9 @@ public sealed class ProductManagementReadService(StorePosDbContext context)
             query = query.Where(product =>
                 product.Name.Contains(search) ||
                 product.Code.Contains(search) ||
-                product.Barcode != null && product.Barcode.Contains(search));
+                product.Barcode != null && product.Barcode.Contains(search) ||
+                product.SupplierName != null && product.SupplierName.Contains(search) ||
+                product.SupplierCode != null && product.SupplierCode.Contains(search));
         }
 
         if (request.MeasurementUnitId.HasValue)
@@ -65,7 +67,10 @@ public sealed class ProductManagementReadService(StorePosDbContext context)
                     unit.Name,
                     unit.ShortName,
                     product.Price,
-                    product.IsActive))
+                    product.IsActive,
+                    product.SupplierName,
+                    product.SupplierCode,
+                    product.CostPrice))
             .Skip((request.PageNumber - 1) * request.PageSize)
             .Take(request.PageSize)
             .ToArrayAsync(cancellationToken);
@@ -94,6 +99,9 @@ public sealed class ProductManagementReadService(StorePosDbContext context)
                     unit.Name,
                     unit.ShortName,
                     product.Price,
-                    product.IsActive))
+                    product.IsActive,
+                    product.SupplierName,
+                    product.SupplierCode,
+                    product.CostPrice))
             .SingleOrDefaultAsync(cancellationToken);
 }

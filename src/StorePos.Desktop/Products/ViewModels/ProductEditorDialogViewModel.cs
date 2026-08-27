@@ -22,6 +22,9 @@ public sealed class ProductEditorDialogViewModel : ObservableObject
     private string _barcode = string.Empty;
     private string _name = string.Empty;
     private string _price = string.Empty;
+    private string _supplierName = string.Empty;
+    private string _supplierCode = string.Empty;
+    private string _costPrice = string.Empty;
     private MeasurementUnitDto? _selectedMeasurementUnit;
     private string? _errorMessage;
     private bool _isBusy;
@@ -35,7 +38,7 @@ public sealed class ProductEditorDialogViewModel : ObservableObject
         _productId = productId;
         _cancellationToken = cancellationToken;
         _saveCommand = new AsyncRelayCommand(SaveAsync, CanSave);
-        GenerateBarcodeCommand = new RelayCommand(GenerateBarcode);
+        GenerateBarcodeCommand = new RelayCommand(GenerateBarcode, CanGenerateBarcode);
         CancelCommand = new RelayCommand(() =>
             CloseRequested?.Invoke(this, new DialogCloseRequestedEventArgs(false)));
     }
@@ -68,6 +71,24 @@ public sealed class ProductEditorDialogViewModel : ObservableObject
     {
         get => _price;
         set => SetInput(ref _price, value);
+    }
+
+    public string SupplierName
+    {
+        get => _supplierName;
+        set => SetInput(ref _supplierName, value);
+    }
+
+    public string SupplierCode
+    {
+        get => _supplierCode;
+        set => SetInput(ref _supplierCode, value);
+    }
+
+    public string CostPrice
+    {
+        get => _costPrice;
+        set => SetInput(ref _costPrice, value);
     }
 
     public MeasurementUnitDto? SelectedMeasurementUnit
@@ -122,6 +143,11 @@ public sealed class ProductEditorDialogViewModel : ObservableObject
                 Barcode = product.Barcode ?? string.Empty;
                 Name = product.Name;
                 Price = DecimalInputParser.Format(product.Price);
+                SupplierName = product.SupplierName ?? string.Empty;
+                SupplierCode = product.SupplierCode ?? string.Empty;
+                CostPrice = product.CostPrice.HasValue
+                    ? DecimalInputParser.Format(product.CostPrice.Value)
+                    : string.Empty;
                 SelectedMeasurementUnit = MeasurementUnits.FirstOrDefault(unit =>
                     unit.Id == product.MeasurementUnitId);
             }
@@ -142,7 +168,7 @@ public sealed class ProductEditorDialogViewModel : ObservableObject
                     ErrorMessage = defaults.ConfigurationMessage;
                 }
 
-                if (string.IsNullOrWhiteSpace(Barcode))
+                if (string.IsNullOrWhiteSpace(Barcode) && CanGenerateBarcode())
                 {
                     var configurationMessage = ErrorMessage;
                     GenerateBarcode();
@@ -169,7 +195,9 @@ public sealed class ProductEditorDialogViewModel : ObservableObject
 
     private async Task SaveAsync()
     {
-        if (!TryGetPrice(out var price) || SelectedMeasurementUnit is null)
+        if (!TryGetPrice(out var price) ||
+            !TryGetCostPrice(out var costPrice) ||
+            SelectedMeasurementUnit is null)
         {
             ErrorMessage = "შეავსეთ ყველა სავალდებულო ველი სწორად.";
             return;
@@ -181,10 +209,15 @@ public sealed class ProductEditorDialogViewModel : ObservableObject
             ErrorMessage = null;
             var request = new SaveProductRequest(
                 Code.Trim(),
-                Barcode.Trim(),
+                string.IsNullOrWhiteSpace(Barcode) ? null : Barcode.Trim(),
                 Name.Trim(),
                 SelectedMeasurementUnit.Id,
-                FinancialInputPrecision.RoundUnitPrice(price));
+                FinancialInputPrecision.RoundUnitPrice(price),
+                string.IsNullOrWhiteSpace(SupplierName) ? null : SupplierName.Trim(),
+                string.IsNullOrWhiteSpace(SupplierCode) ? null : SupplierCode.Trim(),
+                costPrice.HasValue
+                    ? FinancialInputPrecision.RoundUnitPrice(costPrice.Value)
+                    : null);
             if (_productId.HasValue)
             {
                 await _apiClient.UpdateProductAsync(
@@ -222,17 +255,48 @@ public sealed class ProductEditorDialogViewModel : ObservableObject
            !string.IsNullOrWhiteSpace(Name) &&
            !string.IsNullOrWhiteSpace(Code) &&
            Code.Trim().Length <= 50 &&
-           Code.Trim().All(character => character is >= '0' and <= '9') &&
-           !string.IsNullOrWhiteSpace(Barcode) &&
            Barcode.Trim().Length <= 100 &&
+           SupplierName.Trim().Length <= 300 &&
+           SupplierCode.Trim().Length <= 100 &&
            SelectedMeasurementUnit is not null &&
-           TryGetPrice(out _);
+           TryGetPrice(out _) &&
+           TryGetCostPrice(out _);
 
     private bool TryGetPrice(out decimal price)
         => DecimalInputParser.TryParse(Price, out price) &&
-           FinancialInputPrecision.RoundUnitPrice(price) >= 0.00001m &&
+           FinancialInputPrecision.RoundUnitPrice(price) >= 0m &&
            FinancialInputPrecision.RoundUnitPrice(price) <=
                FinancialInputPrecision.MaximumFiveScaleValue;
+
+    private bool TryGetCostPrice(out decimal? costPrice)
+    {
+        costPrice = null;
+        if (string.IsNullOrWhiteSpace(CostPrice))
+        {
+            return true;
+        }
+
+        if (!DecimalInputParser.TryParse(CostPrice, out var parsed))
+        {
+            return false;
+        }
+
+        var normalized = FinancialInputPrecision.RoundUnitPrice(parsed);
+        if (normalized < 0 || normalized > FinancialInputPrecision.MaximumFiveScaleValue)
+        {
+            return false;
+        }
+
+        costPrice = normalized;
+        return true;
+    }
+
+    private bool CanGenerateBarcode()
+    {
+        var code = Code.Trim();
+        return code.Length is > 0 and <= Ean13BarcodeGenerator.BodyLength &&
+               code.All(character => character is >= '0' and <= '9');
+    }
 
     private void GenerateBarcode()
     {
@@ -265,6 +329,10 @@ public sealed class ProductEditorDialogViewModel : ObservableObject
         {
             ErrorMessage = null;
             _saveCommand.NotifyCanExecuteChanged();
+            if (propertyName == nameof(Code))
+            {
+                ((RelayCommand)GenerateBarcodeCommand).NotifyCanExecuteChanged();
+            }
         }
     }
 }

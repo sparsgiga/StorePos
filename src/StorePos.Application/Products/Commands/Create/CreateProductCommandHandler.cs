@@ -16,13 +16,18 @@ public sealed class CreateProductCommandHandler(
         CancellationToken cancellationToken)
     {
         var code = request.Code.Trim();
-        var barcode = request.Barcode.Trim();
+        var barcode = string.IsNullOrWhiteSpace(request.Barcode)
+            ? null
+            : request.Barcode.Trim();
         if (await productRepository.CodeExistsAsync(code, cancellationToken: cancellationToken))
         {
             throw new ProductCodeConflictException(code);
         }
 
-        if (await productRepository.BarcodeExistsAsync(barcode, cancellationToken: cancellationToken))
+        if (barcode is not null &&
+            await productRepository.BarcodeExistsAsync(
+                barcode,
+                cancellationToken: cancellationToken))
         {
             throw new ProductBarcodeConflictException(barcode);
         }
@@ -39,7 +44,10 @@ public sealed class CreateProductCommandHandler(
             barcode,
             request.Name,
             request.MeasurementUnitId,
-            request.Price);
+            request.Price,
+            request.SupplierName,
+            request.SupplierCode,
+            request.CostPrice);
         await productRepository.AddAsync(product, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
         return product.ToResult();

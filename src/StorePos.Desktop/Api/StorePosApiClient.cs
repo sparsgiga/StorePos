@@ -208,6 +208,7 @@ public sealed class StorePosApiClient(HttpClient httpClient) : IStorePosApiClien
             request,
             JsonOptions,
             cancellationToken);
+        await ThrowIfProductConflictAsync(response, cancellationToken);
         response.EnsureSuccessStatusCode();
 
         return await response.Content.ReadFromJsonAsync<AddProductSaleItemResponse>(
@@ -563,6 +564,8 @@ public sealed class StorePosApiClient(HttpClient httpClient) : IStorePosApiClien
                 ProductConflictKind.Code,
             { } title when title.Contains("measurement", StringComparison.OrdinalIgnoreCase) =>
                 ProductConflictKind.MeasurementUnit,
+            { } title when title.Contains("retail price", StringComparison.OrdinalIgnoreCase) =>
+                ProductConflictKind.RetailPrice,
             _ => ProductConflictKind.Unknown
         };
 

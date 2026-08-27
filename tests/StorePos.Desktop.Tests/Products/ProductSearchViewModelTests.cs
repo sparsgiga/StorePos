@@ -35,7 +35,30 @@ public sealed class ProductSearchViewModelTests
         Assert.Equal(1, handler.AddRequestCount);
     }
 
-    private sealed class ScannerFlowHandler : HttpMessageHandler
+    [Fact]
+    public async Task Enter_ZeroPriceProductIsBlockedBeforeApiAddForScannerPath()
+    {
+        var handler = new ScannerFlowHandler(0m);
+        using var httpClient = new HttpClient(handler)
+        {
+            BaseAddress = new Uri("http://localhost/")
+        };
+        using var viewModel = new ProductSearchViewModel(
+            new StorePosApiClient(httpClient),
+            () => 5);
+        var error = new TaskCompletionSource<ProductSearchErrorEventArgs>(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        viewModel.ErrorOccurred += (_, args) => error.TrySetResult(args);
+        viewModel.Query = "12345678";
+
+        viewModel.EnterCommand.Execute(null);
+        var result = await error.Task.WaitAsync(TimeSpan.FromSeconds(3));
+
+        Assert.Contains("საცალო ფასი", result.Message);
+        Assert.Equal(0, handler.AddRequestCount);
+    }
+
+    private sealed class ScannerFlowHandler(decimal price = 3.50m) : HttpMessageHandler
     {
         public Uri? SearchRequestUri { get; private set; }
 
@@ -61,7 +84,7 @@ public sealed class ProductSearchViewModelTests
                             1,
                             "Piece",
                             "pc",
-                            3.50m)
+                            price)
                     })
                 });
             }
