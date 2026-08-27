@@ -10,6 +10,7 @@ using StorePos.Application.Products.Commands.Activate;
 using StorePos.Application.Products.Commands.Create;
 using StorePos.Application.Products.Commands.Deactivate;
 using StorePos.Application.Products.Commands.Update;
+using StorePos.Application.Products.Commands.UpdateRetailPrice;
 using StorePos.Application.Products.Queries.GetById;
 using StorePos.Application.Products.Queries.GetList;
 
@@ -87,6 +88,18 @@ public sealed class ProductsController(ISender sender) : ControllerBase
                 request.SupplierName,
                 request.SupplierCode,
                 request.CostPrice),
+            cancellationToken);
+        return result is null ? NotFound() : Ok(result);
+    }
+
+    [HttpPatch("{productId:long}/retail-price")]
+    public async Task<ActionResult<UpdateProductRetailPriceResult>> UpdateRetailPrice(
+        [FromRoute, Range(1, long.MaxValue)] long productId,
+        UpdateProductRetailPriceRequest request,
+        CancellationToken cancellationToken)
+    {
+        var result = await sender.Send(
+            new UpdateProductRetailPriceCommand(productId, request.Price),
             cancellationToken);
         return result is null ? NotFound() : Ok(result);
     }

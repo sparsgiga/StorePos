@@ -118,4 +118,43 @@ public sealed class ProductTests
     public void Create_CodeAboveMaximumLength_Throws()
         => Assert.Throws<ArgumentException>(() =>
             Product.Create(new string('A', Product.CodeMaxLength + 1), null, "Product", 1, 0m));
+
+    [Fact]
+    public void UpdateRetailPrice_NormalizesPriceAndPreservesAllOtherProductData()
+    {
+        var product = Product.Create(
+            "GMTEK-40012",
+            "00077",
+            "Product",
+            2,
+            0m,
+            "Supplier",
+            "00117",
+            18m);
+
+        product.UpdateRetailPrice(25.123456m);
+
+        Assert.Equal(25.12346m, product.Price);
+        Assert.Equal("GMTEK-40012", product.Code);
+        Assert.Equal("00077", product.Barcode);
+        Assert.Equal("Product", product.Name);
+        Assert.Equal(2, product.MeasurementUnitId);
+        Assert.Equal("Supplier", product.SupplierName);
+        Assert.Equal("00117", product.SupplierCode);
+        Assert.Equal(18m, product.CostPrice);
+        Assert.True(product.IsActive);
+    }
+
+    public static TheoryData<decimal> InvalidQuickRetailPrices => new()
+    {
+        0m,
+        -1m,
+        0.000001m
+    };
+
+    [Theory]
+    [MemberData(nameof(InvalidQuickRetailPrices))]
+    public void UpdateRetailPrice_NonPositiveNormalizedPrice_Throws(decimal price)
+        => Assert.Throws<ArgumentOutOfRangeException>(() =>
+            Product.Create("100", null, "Product", 1, 0m).UpdateRetailPrice(price));
 }

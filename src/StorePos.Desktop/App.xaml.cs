@@ -106,11 +106,15 @@ public partial class App : Application
         var apiClient = new StorePosApiClient(_httpClient!);
         var reportingService = new SaleReportingService();
         var dialogService = new SalesDialogService(apiClient, reportingService);
+        var quickRetailPriceDialogService = new QuickRetailPriceDialogService(apiClient);
         var historyDialogService = new HistoryDialogService(
             apiClient,
             new WindowsClipboardService(),
             reportingService);
-        var salesWorkspace = new SalesWorkspaceViewModel(apiClient, dialogService);
+        var salesWorkspace = new SalesWorkspaceViewModel(
+            apiClient,
+            dialogService,
+            quickRetailPriceDialogService);
         var salesHistory = new SalesHistoryViewModel(apiClient, historyDialogService);
         var soldProducts = new SoldProductsViewModel(apiClient, historyDialogService);
         var productDialogService = new ProductDialogService(apiClient);

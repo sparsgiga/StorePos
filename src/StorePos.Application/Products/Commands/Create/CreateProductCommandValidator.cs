@@ -13,7 +13,9 @@ public sealed class CreateProductCommandValidator : AbstractValidator<CreateProd
             .MaximumLength(Product.NameMaxLength);
         RuleFor(command => command.Code)
             .NotEmpty().WithMessage("პროდუქტის კოდი სავალდებულოა.")
-            .MaximumLength(Product.CodeMaxLength);
+            .MaximumLength(Product.CodeMaxLength)
+            .Matches("^[0-9]+$")
+            .WithMessage("ახალი პროდუქტის კოდი უნდა შეიცავდეს მხოლოდ ციფრებს (0-9).");
         RuleFor(command => command.Barcode)
             .MaximumLength(Product.BarcodeMaxLength);
         RuleFor(command => command.SupplierName)

@@ -13,7 +13,9 @@ public sealed class CreateProductAndAddToSaleCommandValidator
         RuleFor(command => command.SaleId).GreaterThan(0);
         RuleFor(command => command.ProductCode)
             .NotEmpty()
-            .MaximumLength(Product.CodeMaxLength);
+            .MaximumLength(Product.CodeMaxLength)
+            .Matches("^[0-9]+$")
+            .WithMessage("ახალი პროდუქტის კოდი უნდა შეიცავდეს მხოლოდ ციფრებს (0-9).");
         RuleFor(command => command.Name)
             .NotEmpty()
             .MaximumLength(Product.NameMaxLength);

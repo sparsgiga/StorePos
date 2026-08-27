@@ -57,7 +57,7 @@ public sealed class ProductManagementReadService(StorePosDbContext context)
                 from product in query
                 join unit in context.MeasurementUnits.AsNoTracking()
                     on product.MeasurementUnitId equals unit.Id
-                orderby product.Name, product.Code, product.Id
+                orderby product.Id
                 select new ProductListItem(
                     product.Id,
                     product.Code,

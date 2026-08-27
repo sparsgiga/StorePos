@@ -98,6 +98,20 @@ public sealed class Product : AuditableEntity<long>, IAggregateRoot
 
     public void Deactivate() => IsActive = false;
 
+    public void UpdateRetailPrice(decimal price)
+    {
+        var normalizedPrice = FinancialPrecision.RoundUnitPrice(price);
+        if (normalizedPrice <= 0 ||
+            normalizedPrice > FinancialPrecision.MaximumFiveScaleValue)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(price),
+                "Retail price must be greater than zero and within the supported range.");
+        }
+
+        Price = normalizedPrice;
+    }
+
     private void ApplyDetails(
         string code,
         string? barcode,

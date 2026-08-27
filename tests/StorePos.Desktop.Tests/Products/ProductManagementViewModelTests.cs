@@ -38,7 +38,7 @@ public sealed class ProductManagementViewModelTests
         var apiClient = CreateClient(handler);
         var factoryCalls = 0;
         using var main = new MainWindowViewModel(
-            new SalesWorkspaceViewModel(apiClient, null!),
+            new SalesWorkspaceViewModel(apiClient, null!, null!),
             new SalesHistoryViewModel(apiClient, null!),
             new SoldProductsViewModel(apiClient, null!),
             () =>
@@ -118,6 +118,32 @@ public sealed class ProductManagementViewModelTests
     }
 
     [Fact]
+    public async Task CreateEditor_RequiresAsciiNumericCode()
+    {
+        var handler = new StubHandler(request => request.RequestUri!.AbsolutePath switch
+        {
+            "/api/measurement-units" => Json(new[]
+            {
+                new MeasurementUnitDto(1, "Piece", "pc", null)
+            }),
+            "/api/products/creation-defaults" => Json(new ProductCreationDefaultsDto(
+                "10526", 1, "Piece", "pc", null)),
+            _ => new HttpResponseMessage(HttpStatusCode.NotFound)
+        });
+        var viewModel = new ProductEditorDialogViewModel(
+            CreateClient(handler), null, CancellationToken.None);
+        await viewModel.InitializeAsync();
+        viewModel.Name = "Product";
+        viewModel.Price = "1";
+
+        viewModel.Code = "A-1";
+        Assert.False(viewModel.SaveCommand.CanExecute(null));
+
+        viewModel.Code = "10526";
+        Assert.True(viewModel.SaveCommand.CanExecute(null));
+    }
+
+    [Fact]
     public async Task EditEditor_PreservesBarcodeUntilExplicitRegeneration()
     {
         var handler = new StubHandler(request => request.RequestUri!.AbsolutePath switch
@@ -127,13 +153,14 @@ public sealed class ProductManagementViewModelTests
                 new MeasurementUnitDto(1, "Piece", "pc", null)
             }),
             "/api/products/10" => Json(new ProductDetailsDto(
-                10, "100", "existing-barcode", "Product", 1, "Piece", "pc", 2m, true)),
+                10, "A-100", "existing-barcode", "Product", 1, "Piece", "pc", 2m, true)),
             _ => new HttpResponseMessage(HttpStatusCode.NotFound)
         });
         var viewModel = new ProductEditorDialogViewModel(
             CreateClient(handler), 10, CancellationToken.None);
 
         await viewModel.InitializeAsync();
+        Assert.True(viewModel.SaveCommand.CanExecute(null));
         viewModel.Code = "200";
 
         Assert.Equal("existing-barcode", viewModel.Barcode);

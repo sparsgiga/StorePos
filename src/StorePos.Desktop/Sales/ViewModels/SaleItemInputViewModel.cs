@@ -499,7 +499,9 @@ public sealed class SaleItemInputViewModel : ObservableObject
                      DecimalInputParser.TryParse(LineTotal, out var lineTotal) &&
                      lineTotal > 0;
         var normalizedCode = ProductCode.Trim();
-        var hasValidProductCode = normalizedCode.Length is > 0 and <= 50;
+        var hasValidProductCode = normalizedCode.Length is > 0 and <= 50 &&
+                                  normalizedCode.All(character =>
+                                      character is >= '0' and <= '9');
         var hasValidBarcode = !string.IsNullOrWhiteSpace(Barcode) &&
                               Barcode.Trim().Length <= 100;
         CanSubmit = IsComplete &&

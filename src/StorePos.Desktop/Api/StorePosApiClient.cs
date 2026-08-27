@@ -179,6 +179,26 @@ public sealed class StorePosApiClient(HttpClient httpClient) : IStorePosApiClien
         return await ReadProductMutationAsync(response, cancellationToken);
     }
 
+    public async Task<UpdateProductRetailPriceDto> UpdateProductRetailPriceAsync(
+        long productId,
+        UpdateProductRetailPriceRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        using var message = new HttpRequestMessage(
+            HttpMethod.Patch,
+            $"api/products/{productId}/retail-price")
+        {
+            Content = JsonContent.Create(request, options: JsonOptions)
+        };
+        using var response = await httpClient.SendAsync(message, cancellationToken);
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<UpdateProductRetailPriceDto>(
+                   JsonOptions,
+                   cancellationToken)
+               ?? throw new InvalidOperationException(
+                   "The API returned an empty retail-price response.");
+    }
+
     public async Task<ProductMutationDto> DeactivateProductAsync(
         long productId,
         CancellationToken cancellationToken = default)

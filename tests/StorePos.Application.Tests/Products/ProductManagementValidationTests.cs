@@ -1,5 +1,6 @@
 using StorePos.Application.Products.Commands.Create;
 using StorePos.Application.Products.Commands.Update;
+using StorePos.Application.Products.Commands.UpdateRetailPrice;
 using StorePos.Application.Products.Queries.GetList;
 
 namespace StorePos.Application.Tests.Products;
@@ -15,6 +16,18 @@ public sealed class ProductManagementValidationTests
             "100", "", "Product", 1, 0m));
 
         Assert.True(result.IsValid);
+    }
+
+    [Theory]
+    [InlineData("A-1")]
+    [InlineData("12A")]
+    [InlineData("１２３")]
+    public void Create_RejectsNonAsciiNumericCode(string code)
+    {
+        var result = new CreateProductCommandValidator().Validate(
+            new CreateProductCommand(code, null, "Product", 1, 1m));
+
+        Assert.Contains(result.Errors, error => error.PropertyName == "Code");
     }
 
     [Fact]
@@ -40,5 +53,29 @@ public sealed class ProductManagementValidationTests
 
         Assert.Contains(result.Errors, error => error.PropertyName == "PriceTo");
         Assert.Contains(result.Errors, error => error.PropertyName == "PageSize");
+    }
+
+    [Theory]
+    [InlineData("0")]
+    [InlineData("-1")]
+    [InlineData("0.000001")]
+    public void QuickRetailPrice_RejectsNonPositiveNormalizedPrice(string value)
+    {
+        var validator = new UpdateProductRetailPriceCommandValidator();
+
+        var result = validator.Validate(new UpdateProductRetailPriceCommand(
+            1,
+            decimal.Parse(value, System.Globalization.CultureInfo.InvariantCulture)));
+
+        Assert.Contains(result.Errors, error => error.PropertyName == "Price");
+    }
+
+    [Fact]
+    public void QuickRetailPrice_AcceptsPositivePrice()
+    {
+        var result = new UpdateProductRetailPriceCommandValidator().Validate(
+            new UpdateProductRetailPriceCommand(1, 25.123456m));
+
+        Assert.True(result.IsValid);
     }
 }

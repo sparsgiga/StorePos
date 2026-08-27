@@ -104,6 +104,28 @@ public sealed class ProductManagementWorkflowTests
     }
 
     [Fact]
+    public async Task List_DefaultOrderIsProductIdAscending()
+    {
+        await using var context = CreateContext();
+        var unit = MeasurementUnit.Create("Piece", "pc");
+        await context.MeasurementUnits.AddAsync(unit);
+        await context.SaveChangesAsync();
+        await context.Products.AddRangeAsync(
+            Product.Create("Z", null, "Zulu", unit.Id, 1m),
+            Product.Create("A", null, "Alpha", unit.Id, 1m),
+            Product.Create("M", null, "Middle", unit.Id, 1m));
+        await context.SaveChangesAsync();
+
+        var result = await new ProductManagementReadService(context).GetListAsync(
+            new GetProductsQuery(Status: ProductStatusFilter.All));
+
+        Assert.Equal(
+            result.Items.Select(product => product.Id).OrderBy(id => id),
+            result.Items.Select(product => product.Id));
+        Assert.Equal(["Z", "A", "M"], result.Items.Select(product => product.Code));
+    }
+
+    [Fact]
     public async Task DeactivateAndReactivate_ControlCashierSearchWithoutChangingSnapshot()
     {
         await using var context = CreateContext();

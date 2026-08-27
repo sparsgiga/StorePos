@@ -52,6 +52,11 @@ public interface IStorePosApiClient
         SaveProductRequest request,
         CancellationToken cancellationToken = default);
 
+    Task<UpdateProductRetailPriceDto> UpdateProductRetailPriceAsync(
+        long productId,
+        UpdateProductRetailPriceRequest request,
+        CancellationToken cancellationToken = default);
+
     Task<ProductMutationDto> DeactivateProductAsync(
         long productId,
         CancellationToken cancellationToken = default);

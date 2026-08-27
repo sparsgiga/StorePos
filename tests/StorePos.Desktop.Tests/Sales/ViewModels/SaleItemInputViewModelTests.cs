@@ -62,9 +62,11 @@ public sealed class SaleItemInputViewModelTests
         Assert.False(input.CanSubmit);
 
         input.LoadMeasurementUnits([new MeasurementUnitDto(1, "Piece", "pc", null)]);
-        input.ProductCode = "10526";
+        input.ProductCode = "A-10526";
 
         Assert.False(input.CanSubmit);
+
+        input.ProductCode = "10526";
 
         input.Barcode = "0000000105262";
 

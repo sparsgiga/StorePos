@@ -255,12 +255,17 @@ public sealed class ProductEditorDialogViewModel : ObservableObject
            !string.IsNullOrWhiteSpace(Name) &&
            !string.IsNullOrWhiteSpace(Code) &&
            Code.Trim().Length <= 50 &&
+           (_productId.HasValue || IsAsciiDigits(Code.Trim())) &&
            Barcode.Trim().Length <= 100 &&
            SupplierName.Trim().Length <= 300 &&
            SupplierCode.Trim().Length <= 100 &&
            SelectedMeasurementUnit is not null &&
            TryGetPrice(out _) &&
            TryGetCostPrice(out _);
+
+    private static bool IsAsciiDigits(string value)
+        => value.Length > 0 &&
+           value.All(character => character is >= '0' and <= '9');
 
     private bool TryGetPrice(out decimal price)
         => DecimalInputParser.TryParse(Price, out price) &&

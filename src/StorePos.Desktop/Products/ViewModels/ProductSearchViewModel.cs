@@ -4,6 +4,7 @@ using System.Windows.Input;
 using StorePos.Desktop.Api;
 using StorePos.Desktop.Common;
 using StorePos.Desktop.Products.Models;
+using StorePos.Desktop.Products.Dialogs;
 using StorePos.Desktop.Sales.Models;
 
 namespace StorePos.Desktop.Products.ViewModels;
@@ -15,6 +16,7 @@ public sealed class ProductSearchViewModel : ObservableObject, IDisposable
 
     private readonly IStorePosApiClient _apiClient;
     private readonly Func<long?> _getSaleId;
+    private readonly IQuickRetailPriceDialogService _quickRetailPriceDialogService;
     private readonly CancellationTokenSource _lifetimeCancellation = new();
     private readonly AsyncRelayCommand _enterCommand;
     private readonly AsyncRelayCommand _addSelectedCommand;
@@ -28,10 +30,12 @@ public sealed class ProductSearchViewModel : ObservableObject, IDisposable
 
     public ProductSearchViewModel(
         IStorePosApiClient apiClient,
-        Func<long?> getSaleId)
+        Func<long?> getSaleId,
+        IQuickRetailPriceDialogService quickRetailPriceDialogService)
     {
         _apiClient = apiClient;
         _getSaleId = getSaleId;
+        _quickRetailPriceDialogService = quickRetailPriceDialogService;
         _enterCommand = new AsyncRelayCommand(HandleEnterAsync, () => !IsBusy);
         _addSelectedCommand = new AsyncRelayCommand(
             AddSelectedAsync,
@@ -255,15 +259,6 @@ public sealed class ProductSearchViewModel : ObservableObject, IDisposable
 
     private async Task AddProductAsync(ProductSearchResultDto product)
     {
-        if (product.Price <= 0)
-        {
-            ErrorOccurred?.Invoke(
-                this,
-                new ProductSearchErrorEventArgs(
-                    "პროდუქტს საცალო ფასი არ აქვს მითითებული. გაყიდვამდე მიუთითეთ ფასი."));
-            return;
-        }
-
         var saleId = _getSaleId();
         if (!saleId.HasValue)
         {
@@ -271,6 +266,29 @@ public sealed class ProductSearchViewModel : ObservableObject, IDisposable
                 this,
                 new ProductSearchErrorEventArgs("ჯერ აირჩიეთ ან შექმენით ღია გაყიდვა."));
             return;
+        }
+
+        if (product.Price <= 0)
+        {
+            var updatedPrice = _quickRetailPriceDialogService.ShowQuickRetailPrice(
+                product,
+                _lifetimeCancellation.Token);
+            if (updatedPrice is null)
+            {
+                return;
+            }
+
+            if (updatedPrice.ProductId != product.Id || updatedPrice.Price <= 0)
+            {
+                ErrorOccurred?.Invoke(
+                    this,
+                    new ProductSearchErrorEventArgs(
+                        "განახლებული საცალო ფასი ვერ დადასტურდა."));
+                return;
+            }
+
+            product = product with { Price = updatedPrice.Price };
+            ReplaceProductResult(product);
         }
 
         try
@@ -305,6 +323,18 @@ public sealed class ProductSearchViewModel : ObservableObject, IDisposable
         {
             IsBusy = false;
         }
+    }
+
+    private void ReplaceProductResult(ProductSearchResultDto product)
+    {
+        var existing = Results.FirstOrDefault(item => item.Id == product.Id);
+        if (existing is null)
+        {
+            return;
+        }
+
+        Results[Results.IndexOf(existing)] = product;
+        SelectedProduct = product;
     }
 
     private void MoveSelection(int offset)

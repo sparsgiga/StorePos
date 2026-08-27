@@ -144,7 +144,7 @@ public sealed class ProductCatalogWorkflowTests
     }
 
     [Fact]
-    public async Task CreationDefaults_UseMaximumNumericCodeAndSemanticUnitWithoutHardcodedId()
+    public async Task CreationDefaults_UseMaximumPositiveNumericCodeAndSemanticUnit()
     {
         await using var context = CreateContext();
         var otherUnit = MeasurementUnit.Create("Kilogram", "kg");
@@ -153,10 +153,13 @@ public sealed class ProductCatalogWorkflowTests
         await context.SaveChangesAsync();
         Assert.NotEqual(1, defaultUnit.Id);
 
+        await context.Products.AddAsync(
+            Product.Create("0010525", null, "Old numeric maximum", otherUnit.Id, 1m));
+        await context.SaveChangesAsync();
         await context.Products.AddRangeAsync(
-            Product.Create("10520", null, "One", otherUnit.Id, 1m),
-            Product.Create("10522", null, "Two", otherUnit.Id, 1m),
-            Product.Create("10525", null, "Three", otherUnit.Id, 1m));
+            Product.Create("10520", null, "Newer lower numeric", otherUnit.Id, 1m),
+            Product.Create("ABC-999999", null, "Alphanumeric", otherUnit.Id, 1m),
+            Product.Create("9223372036854775808", null, "Outside bigint", otherUnit.Id, 1m));
         await context.SaveChangesAsync();
 
         var result = await new ProductCreationDefaultsReadService(context).GetAsync();
@@ -169,15 +172,19 @@ public sealed class ProductCatalogWorkflowTests
     }
 
     [Fact]
-    public async Task CreationDefaults_EmptyCatalogStartsAtOneAndReportsMissingDefaultUnit()
+    public async Task CreationDefaults_NoNumericCodesReturnsEmptyAndReportsMissingDefaultUnit()
     {
         await using var context = CreateContext();
         await context.MeasurementUnits.AddAsync(MeasurementUnit.Create("Kilogram", "kg"));
         await context.SaveChangesAsync();
+        await context.Products.AddRangeAsync(
+            Product.Create("ABC", null, "Alphabetic", 1, 1m),
+            Product.Create("9223372036854775808", null, "Outside bigint", 1, 1m));
+        await context.SaveChangesAsync();
 
         var result = await new ProductCreationDefaultsReadService(context).GetAsync();
 
-        Assert.Equal("1", result.SuggestedCode);
+        Assert.Equal(string.Empty, result.SuggestedCode);
         Assert.Null(result.DefaultMeasurementUnitId);
         Assert.False(string.IsNullOrWhiteSpace(result.ConfigurationMessage));
     }

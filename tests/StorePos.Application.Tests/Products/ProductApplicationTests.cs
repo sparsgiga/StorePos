@@ -59,7 +59,7 @@ public sealed class ProductApplicationTests
     }
 
     [Fact]
-    public void CreateProductValidator_AllowsFlexibleProductCode()
+    public void CreateProductValidator_RequiresAsciiNumericProductCode()
     {
         var validator = new CreateProductAndAddToSaleCommandValidator();
 
@@ -71,7 +71,7 @@ public sealed class ProductApplicationTests
             24,
             1m,
             2m));
-        var flexible = validator.Validate(new CreateProductAndAddToSaleCommand(
+        var alphanumeric = validator.Validate(new CreateProductAndAddToSaleCommand(
             1,
             "PRD-1",
             "Cement",
@@ -89,7 +89,10 @@ public sealed class ProductApplicationTests
             2m));
 
         Assert.True(valid.IsValid);
-        Assert.True(flexible.IsValid);
+        Assert.False(alphanumeric.IsValid);
+        Assert.Contains(
+            alphanumeric.Errors,
+            error => error.PropertyName == "ProductCode");
         Assert.False(missingBarcode.IsValid);
         Assert.Contains(
             missingBarcode.Errors,

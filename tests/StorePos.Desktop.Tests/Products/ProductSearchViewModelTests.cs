@@ -4,6 +4,7 @@ using System.Net.Http.Json;
 using StorePos.Desktop.Api;
 using StorePos.Desktop.Products.Models;
 using StorePos.Desktop.Products.ViewModels;
+using StorePos.Desktop.Products.Dialogs;
 using StorePos.Desktop.Sales.Models;
 
 namespace StorePos.Desktop.Tests.Products;
@@ -19,7 +20,8 @@ public sealed class ProductSearchViewModelTests
             BaseAddress = new Uri("http://localhost/")
         };
         var apiClient = new StorePosApiClient(httpClient);
-        using var viewModel = new ProductSearchViewModel(apiClient, () => 5);
+        var quickPrice = new StubQuickRetailPriceDialogService();
+        using var viewModel = new ProductSearchViewModel(apiClient, () => 5, quickPrice);
         var added = new TaskCompletionSource<AddProductSaleItemResponse>(
             TaskCreationOptions.RunContinuationsAsynchronously);
         viewModel.ProductAdded += (_, args) => added.TrySetResult(args.Result);
@@ -33,32 +35,61 @@ public sealed class ProductSearchViewModelTests
         Assert.Equal(string.Empty, viewModel.Query);
         Assert.Contains("exactOnly=true", handler.SearchRequestUri?.Query);
         Assert.Equal(1, handler.AddRequestCount);
+        Assert.Equal(0, quickPrice.CallCount);
     }
 
     [Fact]
-    public async Task Enter_ZeroPriceProductIsBlockedBeforeApiAddForScannerPath()
+    public async Task Enter_ZeroPriceProductUpdatesPriceAndContinuesScannerAdd()
+    {
+        var handler = new ScannerFlowHandler(0m, 25m);
+        using var httpClient = new HttpClient(handler)
+        {
+            BaseAddress = new Uri("http://localhost/")
+        };
+        var quickPrice = new StubQuickRetailPriceDialogService(
+            new UpdateProductRetailPriceDto(10, 25m));
+        using var viewModel = new ProductSearchViewModel(
+            new StorePosApiClient(httpClient),
+            () => 5,
+            quickPrice);
+        var added = new TaskCompletionSource<AddProductSaleItemResponse>(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        viewModel.ProductAdded += (_, args) => added.TrySetResult(args.Result);
+        viewModel.Query = "12345678";
+
+        viewModel.EnterCommand.Execute(null);
+        var result = await added.Task.WaitAsync(TimeSpan.FromSeconds(3));
+
+        Assert.Equal(1, quickPrice.CallCount);
+        Assert.Equal(1, handler.AddRequestCount);
+        Assert.Equal(25m, result.UnitPrice);
+    }
+
+    [Fact]
+    public async Task Enter_QuickPriceCancelledDoesNotAddProduct()
     {
         var handler = new ScannerFlowHandler(0m);
         using var httpClient = new HttpClient(handler)
         {
             BaseAddress = new Uri("http://localhost/")
         };
+        var quickPrice = new StubQuickRetailPriceDialogService();
         using var viewModel = new ProductSearchViewModel(
             new StorePosApiClient(httpClient),
-            () => 5);
-        var error = new TaskCompletionSource<ProductSearchErrorEventArgs>(
-            TaskCreationOptions.RunContinuationsAsynchronously);
-        viewModel.ErrorOccurred += (_, args) => error.TrySetResult(args);
+            () => 5,
+            quickPrice);
         viewModel.Query = "12345678";
 
         viewModel.EnterCommand.Execute(null);
-        var result = await error.Task.WaitAsync(TimeSpan.FromSeconds(3));
+        await quickPrice.Invoked.Task.WaitAsync(TimeSpan.FromSeconds(3));
 
-        Assert.Contains("საცალო ფასი", result.Message);
+        Assert.Equal(1, quickPrice.CallCount);
         Assert.Equal(0, handler.AddRequestCount);
     }
 
-    private sealed class ScannerFlowHandler(decimal price = 3.50m) : HttpMessageHandler
+    private sealed class ScannerFlowHandler(
+        decimal price = 3.50m,
+        decimal? salePrice = null) : HttpMessageHandler
     {
         public Uri? SearchRequestUri { get; private set; }
 
@@ -105,16 +136,35 @@ public sealed class ProductSearchViewModelTests
                         1,
                         "Piece",
                         1m,
-                        3.50m,
-                        3.50m,
+                        salePrice ?? 3.50m,
+                        salePrice ?? 3.50m,
                         false,
-                        3.50m,
+                        salePrice ?? 3.50m,
                         true,
                         null))
                 });
             }
 
             return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
+        }
+    }
+
+    private sealed class StubQuickRetailPriceDialogService(
+        UpdateProductRetailPriceDto? result = null)
+        : IQuickRetailPriceDialogService
+    {
+        public TaskCompletionSource Invoked { get; } = new(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public int CallCount { get; private set; }
+
+        public UpdateProductRetailPriceDto? ShowQuickRetailPrice(
+            ProductSearchResultDto product,
+            CancellationToken cancellationToken = default)
+        {
+            CallCount++;
+            Invoked.TrySetResult();
+            return result;
         }
     }
 }

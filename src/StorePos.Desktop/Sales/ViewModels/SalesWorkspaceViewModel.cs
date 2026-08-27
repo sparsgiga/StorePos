@@ -8,6 +8,7 @@ using StorePos.Desktop.Sales.Dialogs;
 using StorePos.Desktop.Sales.Models;
 using StorePos.Desktop.Products;
 using StorePos.Desktop.Products.ViewModels;
+using StorePos.Desktop.Products.Dialogs;
 
 namespace StorePos.Desktop.Sales.ViewModels;
 
@@ -33,13 +34,15 @@ public sealed class SalesWorkspaceViewModel : ObservableObject, IDisposable
 
     public SalesWorkspaceViewModel(
         IStorePosApiClient apiClient,
-        ISalesDialogService dialogService)
+        ISalesDialogService dialogService,
+        IQuickRetailPriceDialogService quickRetailPriceDialogService)
     {
         _apiClient = apiClient;
         _dialogService = dialogService;
         ProductSearch = new ProductSearchViewModel(
             apiClient,
-            () => SelectedSale?.IsDetailsLoaded == true ? SelectedSale.Id : null);
+            () => SelectedSale?.IsDetailsLoaded == true ? SelectedSale.Id : null,
+            quickRetailPriceDialogService);
         ProductSearch.ProductAdded += OnProductAdded;
         ProductSearch.ManualFallbackRequested += OnManualFallbackRequested;
         ProductSearch.ErrorOccurred += OnProductSearchError;
