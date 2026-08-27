@@ -9,6 +9,8 @@ using StorePos.Persistence;
 using StorePos.Persistence.Context;
 using StorePos.Persistence.Queries;
 using StorePos.Persistence.Repositories;
+using StorePos.Persistence.Sequences;
+using StorePos.Persistence.Services;
 
 namespace StorePos.IntegrationTests.Products;
 
@@ -161,10 +163,15 @@ public sealed class ProductCatalogWorkflowTests
             Product.Create("ABC-999999", null, "Alphanumeric", otherUnit.Id, 1m),
             Product.Create("9223372036854775808", null, "Outside bigint", otherUnit.Id, 1m));
         await context.SaveChangesAsync();
+        await context.ManualProductCodeSequences.AddAsync(
+            ManualProductCodeSequence.Initialize(9756));
+        await context.SaveChangesAsync();
 
-        var result = await new ProductCreationDefaultsReadService(context).GetAsync();
+        var result = await new ProductCreationDefaultsReadService(
+            context,
+            new ManualProductCodeSequenceService(context)).GetAsync();
 
-        Assert.Equal("10526", result.SuggestedCode);
+        Assert.Equal("9756", result.SuggestedCode);
         Assert.Equal(defaultUnit.Id, result.DefaultMeasurementUnitId);
         Assert.Equal("ცალი", result.DefaultMeasurementUnitName);
         Assert.Equal("ც", result.DefaultMeasurementUnitShortName);
@@ -181,10 +188,15 @@ public sealed class ProductCatalogWorkflowTests
             Product.Create("ABC", null, "Alphabetic", 1, 1m),
             Product.Create("9223372036854775808", null, "Outside bigint", 1, 1m));
         await context.SaveChangesAsync();
+        await context.ManualProductCodeSequences.AddAsync(
+            ManualProductCodeSequence.Initialize(1000));
+        await context.SaveChangesAsync();
 
-        var result = await new ProductCreationDefaultsReadService(context).GetAsync();
+        var result = await new ProductCreationDefaultsReadService(
+            context,
+            new ManualProductCodeSequenceService(context)).GetAsync();
 
-        Assert.Equal(string.Empty, result.SuggestedCode);
+        Assert.Equal("1000", result.SuggestedCode);
         Assert.Null(result.DefaultMeasurementUnitId);
         Assert.False(string.IsNullOrWhiteSpace(result.ConfigurationMessage));
     }
@@ -231,10 +243,41 @@ public sealed class ProductCatalogWorkflowTests
         Assert.Equal(selectedUnit.Id, product.MeasurementUnitId);
         Assert.Equal(0.444m, product.Price);
         Assert.True(product.IsActive);
+        context.ChangeTracker.Clear();
+        Assert.Equal(
+            1000,
+            await context.ManualProductCodeSequences
+                .Select(sequence => sequence.NextCode)
+                .SingleAsync());
 
         var searchResult = Assert.Single(await new ProductReadService(context)
             .SearchAsync("20000", 15, exactOnly: true));
         Assert.Equal(product.Id, searchResult.Id);
+    }
+
+    [Fact]
+    public async Task CreateProductAndAddToSale_ConsumingSuggestionAdvancesSequence()
+    {
+        await using var context = CreateContext();
+        var unit = MeasurementUnit.Create("Piece", "pc");
+        var sale = Sale.Create("20260827-0002");
+        await context.MeasurementUnits.AddAsync(unit);
+        await context.Sales.AddAsync(sale);
+        await context.SaveChangesAsync();
+        var handler = CreateProductHandler(context);
+
+        var result = await handler.Handle(
+            new CreateProductAndAddToSaleCommand(
+                sale.Id, "1000", "Product", "0000000010004", unit.Id, 1m, 1m),
+            CancellationToken.None);
+
+        Assert.NotNull(result);
+        context.ChangeTracker.Clear();
+        Assert.Equal(
+            1001,
+            await context.ManualProductCodeSequences
+                .Select(sequence => sequence.NextCode)
+                .SingleAsync());
     }
 
     [Fact]
@@ -274,11 +317,22 @@ public sealed class ProductCatalogWorkflowTests
 
     private static CreateProductAndAddToSaleCommandHandler CreateProductHandler(
         StorePosDbContext context)
-        => new(
+    {
+        if (!context.ManualProductCodeSequences.Local.Any() &&
+            !context.ManualProductCodeSequences.Any())
+        {
+            context.ManualProductCodeSequences.Add(
+                ManualProductCodeSequence.Initialize(1000));
+            context.SaveChanges();
+        }
+
+        return new(
             new SaleRepository(context),
             new ProductRepository(context),
             new MeasurementUnitRepository(context),
+            new ManualProductCodeSequenceService(context),
             new UnitOfWork(context));
+    }
 
     private static StorePosDbContext CreateContext()
     {

@@ -1,5 +1,6 @@
 using MediatR;
 using StorePos.Application.Common.Exceptions;
+using StorePos.Application.Common.Interfaces;
 using StorePos.Domain.Aggregates.MeasurementUnit;
 using StorePos.Domain.Aggregates.Product;
 using StorePos.Domain.Interfaces;
@@ -9,6 +10,7 @@ namespace StorePos.Application.Products.Commands.Create;
 public sealed class CreateProductCommandHandler(
     IProductRepository productRepository,
     IMeasurementUnitRepository measurementUnitRepository,
+    IManualProductCodeSequenceService codeSequenceService,
     IUnitOfWork unitOfWork) : IRequestHandler<CreateProductCommand, ProductCommandResult>
 {
     public async Task<ProductCommandResult> Handle(
@@ -49,6 +51,7 @@ public sealed class CreateProductCommandHandler(
             request.SupplierCode,
             request.CostPrice);
         await productRepository.AddAsync(product, cancellationToken);
+        await codeSequenceService.AdvanceIfConsumedAsync(code, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
         return product.ToResult();
     }

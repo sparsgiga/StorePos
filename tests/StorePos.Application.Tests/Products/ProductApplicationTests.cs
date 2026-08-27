@@ -100,6 +100,15 @@ public sealed class ProductApplicationTests
     }
 
     [Fact]
+    public void CreateProduct_IsTransactional()
+    {
+        var command = new StorePos.Application.Products.Commands.Create.CreateProductCommand(
+            "1000", null, "Product", 1, 1m);
+
+        Assert.IsAssignableFrom<ITransactionalRequest>(command);
+    }
+
+    [Fact]
     public async Task TransactionBehavior_CommitsSuccessfulTransactionalRequest()
     {
         var unitOfWork = new RecordingUnitOfWork();

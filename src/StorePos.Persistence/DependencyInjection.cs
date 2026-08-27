@@ -37,6 +37,7 @@ public static class DependencyInjection
         services.AddScoped<IProductReadService, ProductReadService>();
         services.AddScoped<IProductManagementReadService, ProductManagementReadService>();
         services.AddScoped<IProductCreationDefaultsReadService, ProductCreationDefaultsReadService>();
+        services.AddScoped<IManualProductCodeSequenceService, ManualProductCodeSequenceService>();
         services.AddScoped<IMeasurementUnitReadService, MeasurementUnitReadService>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.TryAddSingleton(TimeProvider.System);

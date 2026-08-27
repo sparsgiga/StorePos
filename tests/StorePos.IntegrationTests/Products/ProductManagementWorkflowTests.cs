@@ -12,6 +12,8 @@ using StorePos.Persistence;
 using StorePos.Persistence.Context;
 using StorePos.Persistence.Queries;
 using StorePos.Persistence.Repositories;
+using StorePos.Persistence.Sequences;
+using StorePos.Persistence.Services;
 
 namespace StorePos.IntegrationTests.Products;
 
@@ -76,11 +78,17 @@ public sealed class ProductManagementWorkflowTests
         await using var context = CreateContext();
         var unit = MeasurementUnit.Create("Piece", "pc");
         await context.MeasurementUnits.AddAsync(unit);
+        await context.ManualProductCodeSequences.AddAsync(
+            ManualProductCodeSequence.Initialize(1000));
         await context.SaveChangesAsync();
         var repository = new ProductRepository(context);
         var unitRepository = new MeasurementUnitRepository(context);
         var unitOfWork = new UnitOfWork(context);
-        var create = new CreateProductCommandHandler(repository, unitRepository, unitOfWork);
+        var create = new CreateProductCommandHandler(
+            repository,
+            unitRepository,
+            new ManualProductCodeSequenceService(context),
+            unitOfWork);
 
         var first = await create.Handle(
             new CreateProductCommand("100", "111", "First", unit.Id, 1.234567m),

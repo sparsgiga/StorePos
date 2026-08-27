@@ -13,6 +13,7 @@ public sealed class CreateProductAndAddToSaleCommandHandler(
     ISaleRepository saleRepository,
     IProductRepository productRepository,
     IMeasurementUnitRepository measurementUnitRepository,
+    IManualProductCodeSequenceService codeSequenceService,
     IUnitOfWork unitOfWork)
     : IRequestHandler<CreateProductAndAddToSaleCommand, AddProductSaleItemResult?>
 {
@@ -57,6 +58,7 @@ public sealed class CreateProductAndAddToSaleCommandHandler(
             request.UnitPrice);
 
         await productRepository.AddAsync(product, cancellationToken);
+        await codeSequenceService.AdvanceIfConsumedAsync(productCode, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
         var addition = sale.AddProductItem(

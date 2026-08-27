@@ -1,4 +1,5 @@
 using MediatR;
+using StorePos.Application.Common.Behaviors;
 
 namespace StorePos.Application.Products.Commands.Create;
 
@@ -10,4 +11,5 @@ public sealed record CreateProductCommand(
     decimal Price,
     string? SupplierName = null,
     string? SupplierCode = null,
-    decimal? CostPrice = null) : IRequest<ProductCommandResult>;
+    decimal? CostPrice = null)
+    : IRequest<ProductCommandResult>, ITransactionalRequest;

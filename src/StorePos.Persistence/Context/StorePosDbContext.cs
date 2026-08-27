@@ -5,6 +5,7 @@ using StorePos.Domain.Aggregates.Product;
 using StorePos.Domain.Aggregates.Sale;
 using StorePos.Domain.Aggregates.User;
 using StorePos.Domain.Interfaces;
+using StorePos.Persistence.Sequences;
 
 namespace StorePos.Persistence.Context;
 
@@ -16,6 +17,9 @@ public sealed class StorePosDbContext(DbContextOptions<StorePosDbContext> option
     public DbSet<Product> Products => Set<Product>();
 
     public DbSet<MeasurementUnit> MeasurementUnits => Set<MeasurementUnit>();
+
+    public DbSet<ManualProductCodeSequence> ManualProductCodeSequences =>
+        Set<ManualProductCodeSequence>();
 
     public DbSet<Sale> Sales => Set<Sale>();
 
