@@ -12,7 +12,6 @@ namespace StorePos.Desktop.Sales.ViewModels;
 
 public sealed class CustomerInfoDialogViewModel : ObservableObject, IDisposable
 {
-    private static readonly TimeSpan SearchDelay = TimeSpan.FromMilliseconds(275);
     private readonly IStorePosApiClient _apiClient;
     private readonly long _saleId;
     private readonly CancellationTokenSource _dialogCancellation;
@@ -22,7 +21,7 @@ public sealed class CustomerInfoDialogViewModel : ObservableObject, IDisposable
     private readonly AsyncRelayCommand _removeCustomerCommand;
     private readonly AsyncRelayCommand _saveSaleCommentCommand;
     private readonly RelayCommand _editCustomerCommand;
-    private CancellationTokenSource? _searchCancellation;
+    private readonly List<CustomerDto> _allCustomers = [];
     private long? _customerId;
     private string? _customerName;
     private string? _customerIdentificationNumber;
@@ -153,7 +152,7 @@ public sealed class CustomerInfoDialogViewModel : ObservableObject, IDisposable
         {
             if (SetProperty(ref _searchText, value))
             {
-                _ = DebounceSearchAsync(value);
+                ApplyCustomerFilter(value);
             }
         }
     }
@@ -265,18 +264,22 @@ public sealed class CustomerInfoDialogViewModel : ObservableObject, IDisposable
 
     public async Task InitializeAsync()
     {
-        if (!CustomerId.HasValue)
-        {
-            return;
-        }
-
         try
         {
-            var customer = await _apiClient.GetCustomerAsync(
-                CustomerId.Value,
-                _lifetimeCancellation);
-            AssignedCustomerInformation = customer.Information;
-            SelectedCustomer = customer;
+            var customers = await _apiClient.GetCustomersAsync(_lifetimeCancellation);
+            _allCustomers.Clear();
+            _allCustomers.AddRange(customers);
+            ApplyCustomerFilter(SearchText);
+
+            if (CustomerId.HasValue)
+            {
+                var customer = _allCustomers.FirstOrDefault(item => item.Id == CustomerId.Value)
+                    ?? await _apiClient.GetCustomerAsync(
+                        CustomerId.Value,
+                        _lifetimeCancellation);
+                AssignedCustomerInformation = customer.Information;
+                SelectedCustomer = customer;
+            }
         }
         catch (OperationCanceledException) when (_lifetimeCancellation.IsCancellationRequested)
         {
@@ -284,68 +287,14 @@ public sealed class CustomerInfoDialogViewModel : ObservableObject, IDisposable
         catch (Exception exception)
         {
             Trace.TraceError(exception.ToString());
-            ErrorMessage = "მიბმული მყიდველის მიმდინარე ინფორმაციის ჩატვირთვა ვერ მოხერხდა.";
+            ErrorMessage = "მყიდველების სიის ჩატვირთვა ვერ მოხერხდა.";
         }
     }
 
     public void Dispose()
     {
         _dialogCancellation.Cancel();
-        _searchCancellation?.Cancel();
-        _searchCancellation?.Dispose();
         _dialogCancellation.Dispose();
-    }
-
-    private async Task DebounceSearchAsync(string? value)
-    {
-        _searchCancellation?.Cancel();
-        _searchCancellation?.Dispose();
-
-        var query = value?.Trim();
-        if (string.IsNullOrEmpty(query) || query.Length < 2)
-        {
-            SearchResults.Clear();
-            return;
-        }
-
-        var cancellation = CancellationTokenSource.CreateLinkedTokenSource(
-            _lifetimeCancellation);
-        _searchCancellation = cancellation;
-
-        try
-        {
-            await Task.Delay(SearchDelay, cancellation.Token);
-            var results = await _apiClient.SearchCustomersAsync(
-                query,
-                cancellationToken: cancellation.Token);
-
-            if (!ReferenceEquals(_searchCancellation, cancellation))
-            {
-                return;
-            }
-
-            SearchResults.Clear();
-            foreach (var customer in results)
-            {
-                SearchResults.Add(customer);
-            }
-        }
-        catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
-        {
-        }
-        catch (Exception exception)
-        {
-            Trace.TraceError(exception.ToString());
-            ErrorMessage = "მყიდველების ძებნა ვერ მოხერხდა.";
-        }
-        finally
-        {
-            if (ReferenceEquals(_searchCancellation, cancellation))
-            {
-                _searchCancellation = null;
-                cancellation.Dispose();
-            }
-        }
     }
 
     private async Task SelectCustomerAsync()
@@ -543,6 +492,16 @@ public sealed class CustomerInfoDialogViewModel : ObservableObject, IDisposable
 
     private void ReplaceSearchResult(CustomerDto updated)
     {
+        var allExisting = _allCustomers.FirstOrDefault(customer => customer.Id == updated.Id);
+        if (allExisting is null)
+        {
+            _allCustomers.Add(updated);
+        }
+        else
+        {
+            _allCustomers[_allCustomers.IndexOf(allExisting)] = updated;
+        }
+
         var existing = SearchResults.FirstOrDefault(customer => customer.Id == updated.Id);
         if (existing is null)
         {
@@ -551,6 +510,31 @@ public sealed class CustomerInfoDialogViewModel : ObservableObject, IDisposable
         }
 
         SearchResults[SearchResults.IndexOf(existing)] = updated;
+    }
+
+    private void ApplyCustomerFilter(string? value)
+    {
+        var query = value?.Trim();
+        IEnumerable<CustomerDto> filtered = _allCustomers;
+        if (!string.IsNullOrEmpty(query))
+        {
+            filtered = filtered.Where(customer =>
+                customer.Name.Contains(query, StringComparison.CurrentCultureIgnoreCase) ||
+                customer.IdentificationNumber?.Contains(
+                    query,
+                    StringComparison.OrdinalIgnoreCase) == true);
+        }
+
+        SearchResults.Clear();
+        foreach (var customer in filtered
+                     .OrderBy(customer => customer.Name)
+                     .ThenBy(customer => customer.Id))
+        {
+            SearchResults.Add(customer);
+        }
+
+        SelectedCustomer = SearchResults.FirstOrDefault(customer =>
+            customer.Id == CustomerId) ?? SearchResults.FirstOrDefault();
     }
 
     private void ClearMessages()

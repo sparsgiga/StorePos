@@ -1,4 +1,5 @@
 using MediatR;
+using StorePos.Application.Common.Exceptions;
 using StorePos.Domain.Aggregates.Sale;
 using StorePos.Domain.Interfaces;
 
@@ -33,8 +34,23 @@ public sealed class RemoveSaleItemCommandHandler(
         {
             return null;
         }
+        catch (InvalidOperationException exception)
+        {
+            throw new SaleOperationConflictException(
+                "ფასდაკლება ვერ იქნება პროდუქტების ჯამზე მეტი.",
+                exception);
+        }
 
-        await unitOfWork.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await unitOfWork.SaveChangesAsync(cancellationToken);
+        }
+        catch (PersistenceConcurrencyException exception)
+        {
+            throw new SaleOperationConflictException(
+                "გაყიდვის მდგომარეობა შეიცვალა. განაახლეთ მონაცემები და სცადეთ თავიდან.",
+                exception);
+        }
 
         return new RemoveSaleItemResult(
             sale.Id,

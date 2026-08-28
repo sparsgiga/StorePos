@@ -396,6 +396,12 @@ namespace StorePos.Persistence.Migrations
                     b.Property<DateTime?>("DateUpdated")
                         .HasColumnType("datetime2");
 
+                    b.Property<decimal>("DiscountAmount")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasDefaultValue(0m);
+
                     b.Property<long>("FinancialRevision")
                         .HasColumnType("bigint");
 
@@ -438,7 +444,10 @@ namespace StorePos.Persistence.Migrations
 
                     b.HasIndex("Status");
 
-                    b.ToTable("Sales", "dbo");
+                    b.ToTable("Sales", "dbo", t =>
+                        {
+                            t.HasCheckConstraint("CK_Sales_DiscountAmount_NonNegative", "[DiscountAmount] >= 0");
+                        });
                 });
 
             modelBuilder.Entity("StorePos.Domain.Aggregates.Sale.SaleItem", b =>

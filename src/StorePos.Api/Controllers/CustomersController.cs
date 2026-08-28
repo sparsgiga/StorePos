@@ -5,6 +5,7 @@ using StorePos.Api.Contracts.Customers;
 using StorePos.Application.Customers.Commands.Create;
 using StorePos.Application.Customers.Commands.Update;
 using StorePos.Application.Customers.Queries.GetById;
+using StorePos.Application.Customers.Queries.GetAll;
 using StorePos.Application.Customers.Queries.Search;
 
 namespace StorePos.Api.Controllers;
@@ -13,6 +14,11 @@ namespace StorePos.Api.Controllers;
 [Route("api/customers")]
 public sealed class CustomersController(ISender sender) : ControllerBase
 {
+    [HttpGet]
+    public async Task<ActionResult<IReadOnlyList<CustomerSearchResult>>> GetAll(
+        CancellationToken cancellationToken)
+        => Ok(await sender.Send(new GetAllCustomersQuery(), cancellationToken));
+
     [HttpGet("search")]
     public async Task<ActionResult<IReadOnlyList<CustomerSearchResult>>> Search(
         [FromQuery] string? query,

@@ -153,6 +153,8 @@ public sealed class LoadingListDialogViewModelTests
             DateTime.Now,
             60m,
             0m,
+            60m,
+            0m,
             0m,
             0m,
             0m,

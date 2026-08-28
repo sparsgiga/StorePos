@@ -4,6 +4,9 @@ namespace StorePos.Application.Common.Interfaces;
 
 public interface ICustomerReadService
 {
+    Task<IReadOnlyList<CustomerSearchResult>> GetAllAsync(
+        CancellationToken cancellationToken = default);
+
     Task<IReadOnlyList<CustomerSearchResult>> SearchAsync(
         string query,
         int limit,

@@ -6,6 +6,7 @@ using StorePos.Application.Sales.Commands.AddManualItem;
 using StorePos.Application.Sales.Commands.AddProductItem;
 using StorePos.Application.Sales.Commands.RemoveItem;
 using StorePos.Application.Sales.Commands.UpdateItem;
+using StorePos.Application.Sales.Commands.UpdateFinancials;
 using StorePos.Application.Products.Commands.CreateAndAddToSale;
 
 namespace StorePos.Api.Controllers;
@@ -77,6 +78,24 @@ public sealed class SaleItemsController(ISender sender) : ControllerBase
                 request.Quantity,
                 request.UnitPrice,
                 request.Comment), cancellationToken);
+        return result is null ? NotFound() : Ok(result);
+    }
+
+    [HttpPatch("{saleItemId:long}/financials")]
+    public async Task<ActionResult<UpdateSaleItemFinancialsResult>> UpdateFinancials(
+        [FromRoute, Range(1, long.MaxValue)] long saleId,
+        [FromRoute, Range(1, long.MaxValue)] long saleItemId,
+        UpdateSaleItemFinancialsRequest request,
+        CancellationToken cancellationToken)
+    {
+        var result = await sender.Send(
+            new UpdateSaleItemFinancialsCommand(
+                saleId,
+                saleItemId,
+                request.Quantity,
+                request.UnitPrice,
+                request.LineTotal),
+            cancellationToken);
         return result is null ? NotFound() : Ok(result);
     }
 

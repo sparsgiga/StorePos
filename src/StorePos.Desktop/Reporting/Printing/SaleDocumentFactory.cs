@@ -173,7 +173,9 @@ public sealed class SaleDocumentFactory
             BorderThickness = new Thickness(1)
         };
         var panel = new StackPanel { HorizontalAlignment = HorizontalAlignment.Right, Width = 300 };
-        panel.Children.Add(SummaryLine("სულ", report.TotalAmount, 16, FontWeights.Bold));
+        panel.Children.Add(SummaryLine("პროდუქტების ჯამი", report.Subtotal, 12));
+        panel.Children.Add(SummaryLine("ფასდაკლება", report.DiscountAmount, 12));
+        panel.Children.Add(SummaryLine("გადასახდელი", report.TotalAmount, 16, FontWeights.Bold));
         panel.Children.Add(SummaryLine("გადახდილი", report.PaidAmount, 13, FontWeights.SemiBold));
         panel.Children.Add(SummaryLine("ვალი", report.OutstandingAmount, 13,
             report.OutstandingAmount > 0 ? FontWeights.Bold : FontWeights.Normal));

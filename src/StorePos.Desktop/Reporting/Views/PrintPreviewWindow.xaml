@@ -17,7 +17,7 @@
                        Text="{Binding ErrorMessage}" TextWrapping="Wrap" />
             <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
                 <Button MinWidth="120" Margin="0,0,8,0" Padding="12,6"
-                        Command="{Binding PrintCommand}" Content="ბეჭდვა" />
+                        Command="{Binding PrintCommand}" Content="ბეჭდვა" IsDefault="True" />
                 <Button MinWidth="90" Padding="12,6" IsCancel="True" Content="დახურვა" />
             </StackPanel>
         </DockPanel>

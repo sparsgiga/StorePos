@@ -7,6 +7,19 @@ namespace StorePos.Persistence.Queries;
 
 public sealed class CustomerReadService(StorePosDbContext context) : ICustomerReadService
 {
+    public async Task<IReadOnlyList<CustomerSearchResult>> GetAllAsync(
+        CancellationToken cancellationToken = default)
+        => await context.Customers
+            .AsNoTracking()
+            .OrderBy(customer => customer.Name)
+            .ThenBy(customer => customer.Id)
+            .Select(customer => new CustomerSearchResult(
+                customer.Id,
+                customer.Name,
+                customer.IdentificationNumber,
+                customer.Information))
+            .ToArrayAsync(cancellationToken);
+
     public async Task<IReadOnlyList<CustomerSearchResult>> SearchAsync(
         string query,
         int limit,

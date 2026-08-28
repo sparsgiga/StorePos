@@ -7,6 +7,9 @@ namespace StorePos.Desktop.Sales.ViewModels;
 
 public sealed class SaleTabViewModel : ObservableObject
 {
+    private decimal _subtotal;
+    private decimal _discountAmount;
+    private string _discountText;
     private decimal _totalAmount;
     private long? _customerId;
     private string? _customerName;
@@ -21,6 +24,8 @@ public sealed class SaleTabViewModel : ObservableObject
     public SaleTabViewModel(
         long id,
         string saleNumber,
+        decimal subtotal,
+        decimal discountAmount,
         decimal totalAmount,
         DateTime dateCreated,
         long? customerId,
@@ -31,6 +36,9 @@ public sealed class SaleTabViewModel : ObservableObject
     {
         Id = id;
         SaleNumber = saleNumber;
+        _subtotal = subtotal;
+        _discountAmount = discountAmount;
+        _discountText = DecimalInputParser.Format(discountAmount);
         _totalAmount = totalAmount;
         DateCreated = dateCreated;
         _customerId = customerId;
@@ -44,6 +52,24 @@ public sealed class SaleTabViewModel : ObservableObject
 
     public string SaleNumber { get; }
 
+    public decimal Subtotal
+    {
+        get => _subtotal;
+        private set => SetProperty(ref _subtotal, value);
+    }
+
+    public decimal DiscountAmount
+    {
+        get => _discountAmount;
+        private set => SetProperty(ref _discountAmount, value);
+    }
+
+    public string DiscountText
+    {
+        get => _discountText;
+        set => SetProperty(ref _discountText, value);
+    }
+
     public decimal TotalAmount
     {
         get => _totalAmount;
@@ -55,13 +81,25 @@ public sealed class SaleTabViewModel : ObservableObject
     public long? CustomerId
     {
         get => _customerId;
-        private set => SetProperty(ref _customerId, value);
+        private set
+        {
+            if (SetProperty(ref _customerId, value))
+            {
+                NotifyCustomerState();
+            }
+        }
     }
 
     public string? CustomerName
     {
         get => _customerName;
-        set => SetProperty(ref _customerName, value);
+        set
+        {
+            if (SetProperty(ref _customerName, value))
+            {
+                NotifyCustomerState();
+            }
+        }
     }
 
     public string? CustomerIdentificationNumber
@@ -102,6 +140,13 @@ public sealed class SaleTabViewModel : ObservableObject
         private set => SetProperty(ref _hasDebt, value);
     }
 
+    public bool HasAssignedCustomer =>
+        CustomerId.HasValue || !string.IsNullOrWhiteSpace(CustomerName);
+
+    public string CustomerStatusText => HasAssignedCustomer
+        ? CustomerName ?? "მყიდველი მითითებულია"
+        : "მყიდველი არ არის მითითებული";
+
     public PreviousCompletionPaymentStateDto? PreviousCompletionPaymentState
     {
         get => _previousCompletionPaymentState;
@@ -111,6 +156,8 @@ public sealed class SaleTabViewModel : ObservableObject
     public ObservableCollection<SaleItemViewModel> Items { get; } = [];
 
     public void ApplyDetails(
+        decimal subtotal,
+        decimal discountAmount,
         decimal totalAmount,
         long? customerId,
         string? customerName,
@@ -129,7 +176,7 @@ public sealed class SaleTabViewModel : ObservableObject
             Items.Add(item);
         }
 
-        TotalAmount = totalAmount;
+        ApplyFinancials(subtotal, discountAmount, totalAmount);
         CustomerId = customerId;
         CustomerName = customerName;
         CustomerIdentificationNumber = customerIdentificationNumber;
@@ -203,9 +250,21 @@ public sealed class SaleTabViewModel : ObservableObject
         ApplyTotalAmount(totalAmount);
     }
 
+    public void ApplyFinancials(
+        decimal subtotal,
+        decimal discountAmount,
+        decimal totalAmount)
+    {
+        Subtotal = subtotal;
+        DiscountAmount = discountAmount;
+        DiscountText = DecimalInputParser.Format(discountAmount);
+        ApplyTotalAmount(totalAmount);
+    }
+
     private void ApplyTotalAmount(decimal totalAmount)
     {
         TotalAmount = totalAmount;
+        Subtotal = FinancialInputPrecision.RoundMoney(TotalAmount + DiscountAmount);
         if (CompletionVersion == 0)
         {
             PaidAmount = 0m;
@@ -218,5 +277,11 @@ public sealed class SaleTabViewModel : ObservableObject
             FinancialInputPrecision.RoundMoney(TotalAmount - PaidAmount),
             0m);
         HasDebt = OutstandingAmount > 0;
+    }
+
+    private void NotifyCustomerState()
+    {
+        OnPropertyChanged(nameof(HasAssignedCustomer));
+        OnPropertyChanged(nameof(CustomerStatusText));
     }
 }

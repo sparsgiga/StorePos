@@ -61,7 +61,9 @@ public sealed class SalesDialogService(
             sale.TotalAmount,
             sale.CustomerId,
             cancellationToken,
-            sale.PreviousCompletionPaymentState);
+            sale.PreviousCompletionPaymentState,
+            sale.Subtotal,
+            sale.DiscountAmount);
         var dialog = new CompleteSaleDialog(viewModel)
         {
             Owner = Application.Current.MainWindow

@@ -11,6 +11,8 @@ public sealed record SaleDetailsModel(
     string? CustomerName,
     string? CustomerIdentificationNumber,
     string? Comment,
+    decimal Subtotal,
+    decimal DiscountAmount,
     decimal TotalAmount,
     decimal PaidAmount,
     decimal OutstandingAmount,

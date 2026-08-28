@@ -127,7 +127,7 @@ public sealed class SaleExcelExporter
         WriteEmpty(writer, "numFmt", ("numFmtId", "164"), ("formatCode", "0.#####"));
         writer.WriteEndElement();
         writer.WriteStartElement("fonts");
-        writer.WriteAttributeString("count", "2");
+        writer.WriteAttributeString("count", "3");
         writer.WriteStartElement("font");
         WriteEmpty(writer, "sz", ("val", "11"));
         WriteEmpty(writer, "name", ("val", "Sylfaen"));
@@ -137,23 +137,43 @@ public sealed class SaleExcelExporter
         WriteEmpty(writer, "sz", ("val", "11"));
         WriteEmpty(writer, "name", ("val", "Sylfaen"));
         writer.WriteEndElement();
+        writer.WriteStartElement("font");
+        WriteEmpty(writer, "b");
+        WriteEmpty(writer, "color", ("rgb", "FFFFFFFF"));
+        WriteEmpty(writer, "sz", ("val", "11"));
+        WriteEmpty(writer, "name", ("val", "Sylfaen"));
+        writer.WriteEndElement();
         writer.WriteEndElement();
         writer.WriteStartElement("fills");
-        writer.WriteAttributeString("count", "2");
+        writer.WriteAttributeString("count", "3");
         writer.WriteStartElement("fill");
         WriteEmpty(writer, "patternFill", ("patternType", "none"));
         writer.WriteEndElement();
         writer.WriteStartElement("fill");
         WriteEmpty(writer, "patternFill", ("patternType", "gray125"));
         writer.WriteEndElement();
+        writer.WriteStartElement("fill");
+        writer.WriteStartElement("patternFill");
+        writer.WriteAttributeString("patternType", "solid");
+        WriteEmpty(writer, "fgColor", ("rgb", "FF1F4E78"));
+        WriteEmpty(writer, "bgColor", ("indexed", "64"));
+        writer.WriteEndElement();
+        writer.WriteEndElement();
         writer.WriteEndElement();
         writer.WriteStartElement("borders");
-        writer.WriteAttributeString("count", "1");
+        writer.WriteAttributeString("count", "2");
         writer.WriteStartElement("border");
         WriteEmpty(writer, "left");
         WriteEmpty(writer, "right");
         WriteEmpty(writer, "top");
         WriteEmpty(writer, "bottom");
+        WriteEmpty(writer, "diagonal");
+        writer.WriteEndElement();
+        writer.WriteStartElement("border");
+        WriteBorderSide(writer, "left");
+        WriteBorderSide(writer, "right");
+        WriteBorderSide(writer, "top");
+        WriteBorderSide(writer, "bottom");
         WriteEmpty(writer, "diagonal");
         writer.WriteEndElement();
         writer.WriteEndElement();
@@ -162,13 +182,19 @@ public sealed class SaleExcelExporter
         WriteEmpty(writer, "xf", ("numFmtId", "0"), ("fontId", "0"), ("fillId", "0"), ("borderId", "0"));
         writer.WriteEndElement();
         writer.WriteStartElement("cellXfs");
-        writer.WriteAttributeString("count", "6");
+        writer.WriteAttributeString("count", "12");
         WriteXf(writer, 0, 0, false, false);
         WriteXf(writer, 0, 1, false, false);
         WriteXf(writer, 4, 0, true, false);
         WriteXf(writer, 164, 0, true, false);
         WriteXf(writer, 0, 0, false, true);
         WriteXf(writer, 0, 1, false, true);
+        WriteXf(writer, 0, 2, false, false, fillId: 2, borderId: 1, centered: true);
+        WriteXf(writer, 0, 0, false, false, borderId: 1);
+        WriteXf(writer, 0, 0, false, true, borderId: 1);
+        WriteXf(writer, 164, 0, true, false, borderId: 1);
+        WriteXf(writer, 164, 0, true, false, borderId: 1);
+        WriteXf(writer, 4, 0, true, false, borderId: 1);
         writer.WriteEndElement();
         writer.WriteStartElement("cellStyles");
         writer.WriteAttributeString("count", "1");
@@ -183,23 +209,43 @@ public sealed class SaleExcelExporter
         int numberFormatId,
         int fontId,
         bool applyNumberFormat,
-        bool wrap)
+        bool wrap,
+        int fillId = 0,
+        int borderId = 0,
+        bool centered = false)
     {
         writer.WriteStartElement("xf");
         writer.WriteAttributeString("numFmtId", numberFormatId.ToString(CultureInfo.InvariantCulture));
         writer.WriteAttributeString("fontId", fontId.ToString(CultureInfo.InvariantCulture));
-        writer.WriteAttributeString("fillId", "0");
-        writer.WriteAttributeString("borderId", "0");
+        writer.WriteAttributeString("fillId", fillId.ToString(CultureInfo.InvariantCulture));
+        writer.WriteAttributeString("borderId", borderId.ToString(CultureInfo.InvariantCulture));
         writer.WriteAttributeString("xfId", "0");
         if (applyNumberFormat)
         {
             writer.WriteAttributeString("applyNumberFormat", "1");
         }
-        if (wrap)
+        if (wrap || centered)
         {
             writer.WriteAttributeString("applyAlignment", "1");
-            WriteEmpty(writer, "alignment", ("wrapText", "1"), ("vertical", "top"));
+            var attributes = new List<(string Name, string Value)> { ("vertical", "top") };
+            if (wrap)
+            {
+                attributes.Add(("wrapText", "1"));
+            }
+            if (centered)
+            {
+                attributes.Add(("horizontal", "center"));
+            }
+            WriteEmpty(writer, "alignment", attributes.ToArray());
         }
+        writer.WriteEndElement();
+    }
+
+    private static void WriteBorderSide(XmlWriter writer, string name)
+    {
+        writer.WriteStartElement(name);
+        writer.WriteAttributeString("style", "thin");
+        WriteEmpty(writer, "color", ("rgb", "FFB7C4CE"));
         writer.WriteEndElement();
     }
 
@@ -210,48 +256,54 @@ public sealed class SaleExcelExporter
         writer.WriteStartElement("sheetViews");
         writer.WriteStartElement("sheetView");
         writer.WriteAttributeString("workbookViewId", "0");
-        WriteEmpty(writer, "pane", ("ySplit", "4"), ("topLeftCell", "A5"),
+        WriteEmpty(writer, "pane", ("ySplit", "1"), ("topLeftCell", "A2"),
             ("activePane", "bottomLeft"), ("state", "frozen"));
         writer.WriteEndElement();
         writer.WriteEndElement();
         writer.WriteStartElement("cols");
-        WriteColumn(writer, 1, 12);
-        WriteColumn(writer, 2, 17);
-        WriteColumn(writer, 3, 42);
+        WriteColumn(writer, 1, 14);
+        WriteColumn(writer, 2, 19);
+        WriteColumn(writer, 3, 46);
         WriteColumn(writer, 4, 12);
         WriteColumn(writer, 5, 12);
-        WriteColumn(writer, 6, 13);
+        WriteColumn(writer, 6, 15);
         WriteColumn(writer, 7, 14);
-        WriteColumn(writer, 8, 30);
+        WriteColumn(writer, 8, 36);
         writer.WriteEndElement();
         writer.WriteStartElement("sheetData");
 
-        WriteStringRow(writer, 1, 5, ("A", "გაყიდვის სრული ანგარიში"));
-        WriteMetadataRow(writer, 2,
-            ("A", "გაყიდვა", "B", report.SaleNumber),
-            ("C", "სტატუსი", "D", ReportFormatting.Status(report.Status)),
-            ("E", "მყიდველი", "F", report.CustomerName ?? "—"),
-            ("G", "საიდ. №", "H", report.CustomerIdentificationNumber ?? "—"));
-        WriteMetadataRow(writer, 3,
-            ("A", "შექმნილია", "B", report.DateCreated.ToString("dd.MM.yyyy HH:mm")),
-            ("C", "დასრულებულია", "D", report.DateCompleted?.ToString("dd.MM.yyyy HH:mm") ?? "—"),
-            ("E", "დაბეჭდილია", "F", report.PrintedAt.ToString("dd.MM.yyyy HH:mm")));
-
-        WriteStringRow(writer, 4, 5,
+        WriteStringRow(writer, 1, 6,
             ("A", "კოდი"), ("B", "შტრიხკოდი"), ("C", "პროდუქტი"),
             ("D", "ერთეული"), ("E", "რაოდენობა"), ("F", "ერთ. ფასი"),
             ("G", "ჯამი"), ("H", "კომენტარი"));
 
-        var rowNumber = 5;
+        var rowNumber = 2;
         foreach (var item in report.Items)
         {
             WriteItemRow(writer, rowNumber++, item);
         }
 
-        var lastItemRow = Math.Max(4, rowNumber - 1);
+        var lastItemRow = Math.Max(1, rowNumber - 1);
 
         rowNumber++;
-        WriteSummaryRow(writer, rowNumber++, "სულ", report.TotalAmount);
+        WriteMetadataRow(writer, rowNumber++,
+            ("A", "გაყიდვა", "B", report.SaleNumber),
+            ("C", "სტატუსი", "D", ReportFormatting.Status(report.Status)));
+        WriteMetadataRow(writer, rowNumber++,
+            ("A", "მყიდველი", "B", report.CustomerName ?? "—"),
+            ("C", "საიდ. №", "D", report.CustomerIdentificationNumber ?? "—"));
+        WriteMetadataRow(writer, rowNumber++,
+            ("A", "შექმნილია", "B", report.DateCreated.ToString("dd.MM.yyyy HH:mm")),
+            ("C", "დასრულებულია", "D", report.DateCompleted?.ToString("dd.MM.yyyy HH:mm") ?? "—"));
+        WriteMetadataRow(writer, rowNumber++,
+            ("A", "გაუქმებულია", "B", report.DateCancelled?.ToString("dd.MM.yyyy HH:mm") ?? "—"),
+            ("C", "ექსპორტირებულია", "D", report.PrintedAt.ToString("dd.MM.yyyy HH:mm")));
+        WriteMetadataRow(writer, rowNumber++,
+            ("A", "კომენტარი", "B", report.Comment ?? "—"));
+
+        WriteSummaryRow(writer, rowNumber++, "პროდუქტების ჯამი", report.Subtotal);
+        WriteSummaryRow(writer, rowNumber++, "ფასდაკლება", report.DiscountAmount);
+        WriteSummaryRow(writer, rowNumber++, "გადასახდელი", report.TotalAmount);
         WriteSummaryRow(writer, rowNumber++, "გადახდილი", report.PaidAmount);
         WriteSummaryRow(writer, rowNumber++, "ვალი", report.OutstandingAmount);
         WriteSummaryRow(writer, rowNumber++, "ნაღდი", report.CashAmount);
@@ -260,7 +312,7 @@ public sealed class SaleExcelExporter
         WriteSummaryRow(writer, rowNumber, "სხვა", report.OtherAmount);
 
         writer.WriteEndElement();
-        WriteEmpty(writer, "autoFilter", ("ref", $"A4:H{lastItemRow}"));
+        WriteEmpty(writer, "autoFilter", ("ref", $"A1:H{lastItemRow}"));
         writer.WriteEndElement();
         writer.WriteEndDocument();
     }
@@ -272,14 +324,14 @@ public sealed class SaleExcelExporter
     {
         writer.WriteStartElement("row");
         writer.WriteAttributeString("r", row.ToString(CultureInfo.InvariantCulture));
-        WriteInlineCell(writer, $"A{row}", item.ProductCode ?? string.Empty, 0);
-        WriteInlineCell(writer, $"B{row}", item.Barcode ?? string.Empty, 0);
-        WriteInlineCell(writer, $"C{row}", item.ProductName, 4);
-        WriteInlineCell(writer, $"D{row}", item.MeasurementUnitName ?? string.Empty, 0);
-        WriteNumberCell(writer, $"E{row}", item.Quantity, 3);
-        WriteNumberCell(writer, $"F{row}", item.UnitPrice, 2);
-        WriteNumberCell(writer, $"G{row}", item.LineTotal, 2);
-        WriteInlineCell(writer, $"H{row}", item.Comment ?? string.Empty, 4);
+        WriteInlineCell(writer, $"A{row}", item.ProductCode ?? string.Empty, 7);
+        WriteInlineCell(writer, $"B{row}", item.Barcode ?? string.Empty, 7);
+        WriteInlineCell(writer, $"C{row}", item.ProductName, 8);
+        WriteInlineCell(writer, $"D{row}", item.MeasurementUnitName ?? string.Empty, 7);
+        WriteNumberCell(writer, $"E{row}", item.Quantity, 9);
+        WriteNumberCell(writer, $"F{row}", item.UnitPrice, 10);
+        WriteNumberCell(writer, $"G{row}", item.LineTotal, 11);
+        WriteInlineCell(writer, $"H{row}", item.Comment ?? string.Empty, 8);
         writer.WriteEndElement();
     }
 

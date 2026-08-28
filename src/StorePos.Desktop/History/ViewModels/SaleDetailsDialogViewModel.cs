@@ -31,6 +31,8 @@ public sealed class SaleDetailsDialogViewModel : ObservableObject
         CustomerName = sale.CustomerName;
         CustomerIdentificationNumber = sale.CustomerIdentificationNumber;
         Comment = sale.Comment;
+        Subtotal = sale.Subtotal;
+        DiscountAmount = sale.DiscountAmount;
         TotalAmount = sale.TotalAmount;
         _paidAmount = sale.PaidAmount;
         _outstandingAmount = sale.OutstandingAmount;
@@ -65,6 +67,8 @@ public sealed class SaleDetailsDialogViewModel : ObservableObject
     public string? CustomerName { get; }
     public string? CustomerIdentificationNumber { get; }
     public string? Comment { get; }
+    public decimal Subtotal { get; }
+    public decimal DiscountAmount { get; }
     public decimal TotalAmount { get; }
     public DateTime DateCreated { get; }
     public DateTime? DateCompleted { get; }
@@ -143,6 +147,8 @@ public sealed class SaleDetailsDialogViewModel : ObservableObject
             CustomerName,
             CustomerIdentificationNumber,
             Comment,
+            Subtotal,
+            DiscountAmount,
             TotalAmount,
             PaidAmount,
             OutstandingAmount,

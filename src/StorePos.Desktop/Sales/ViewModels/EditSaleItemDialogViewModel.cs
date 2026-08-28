@@ -86,7 +86,9 @@ public sealed class EditSaleItemDialogViewModel : ObservableObject
         catch (Exception exception)
         {
             Trace.TraceError(exception.ToString());
-            ErrorMessage = "პროდუქტის ცვლილების შენახვა ვერ მოხერხდა.";
+            ErrorMessage = exception is SaleOperationException
+                ? exception.Message
+                : "პროდუქტის ცვლილების შენახვა ვერ მოხერხდა.";
         }
     }
 

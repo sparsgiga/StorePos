@@ -61,6 +61,8 @@ public sealed class GetDraftSaleDetailsQueryHandler(ISaleRepository saleReposito
             sale.Id,
             sale.SaleNumber,
             sale.CompletionVersion,
+            sale.Subtotal,
+            sale.DiscountAmount,
             sale.TotalAmount,
             sale.PaidAmount,
             sale.OutstandingAmount,

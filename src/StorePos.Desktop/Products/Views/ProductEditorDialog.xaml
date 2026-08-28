@@ -69,7 +69,7 @@
         <StackPanel Grid.Row="9" Grid.ColumnSpan="3" Orientation="Horizontal"
                     HorizontalAlignment="Right">
             <Button MinWidth="105" Margin="0,0,8,0" Padding="12,6"
-                    Command="{Binding SaveCommand}" Content="შენახვა" />
+                    Command="{Binding SaveCommand}" Content="შენახვა" IsDefault="True" />
             <Button MinWidth="95" Padding="12,6"
                     Command="{Binding CancelCommand}" Content="გაუქმება" />
         </StackPanel>

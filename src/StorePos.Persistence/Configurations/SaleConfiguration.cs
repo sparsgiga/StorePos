@@ -33,6 +33,13 @@ public sealed class SaleConfiguration : IEntityTypeConfiguration<Sale>
             .HasPrecision(18, 2)
             .IsRequired();
 
+        builder.Property(x => x.DiscountAmount)
+            .HasPrecision(18, 2)
+            .HasDefaultValue(0m)
+            .IsRequired();
+
+        builder.Ignore(x => x.Subtotal);
+
         builder.Property(x => x.PaidAmount)
             .HasPrecision(18, 2)
             .IsRequired();
@@ -83,5 +90,9 @@ public sealed class SaleConfiguration : IEntityTypeConfiguration<Sale>
 
         builder.Navigation(x => x.Payments)
             .UsePropertyAccessMode(PropertyAccessMode.Field);
+
+        builder.ToTable(table => table.HasCheckConstraint(
+            "CK_Sales_DiscountAmount_NonNegative",
+            "[DiscountAmount] >= 0"));
     }
 }

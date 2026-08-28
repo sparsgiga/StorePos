@@ -11,6 +11,8 @@ public sealed record FullSaleReportModel(
     DateTime? DateCompleted,
     DateTime? DateCancelled,
     DateTime PrintedAt,
+    decimal Subtotal,
+    decimal DiscountAmount,
     decimal TotalAmount,
     decimal PaidAmount,
     decimal OutstandingAmount,

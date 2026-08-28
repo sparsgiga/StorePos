@@ -109,7 +109,7 @@
                              Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" />
                     <TextBlock Margin="0,4,0,0"
                                Foreground="#6B7280"
-                               Text="შეიყვანეთ მინიმუმ 2 სიმბოლო." />
+                               Text="სია სრულად არის ნაჩვენები; აკრეფა მას გაფილტრავს." />
                     <TextBlock Margin="0,3,0,0"
                                Foreground="#334155"
                                FontWeight="SemiBold"
@@ -123,6 +123,7 @@
                          BorderThickness="1"
                          ItemsSource="{Binding SearchResults}"
                          SelectedItem="{Binding SelectedCustomer}"
+                         MouseDoubleClick="OnCustomerDoubleClick"
                          ScrollViewer.VerticalScrollBarVisibility="Auto">
                     <ListBox.ItemContainerStyle>
                         <Style TargetType="ListBoxItem">
@@ -135,28 +136,10 @@
                             <Border Padding="9,7"
                                     BorderBrush="#E2E8F0"
                                     BorderThickness="0,0,0,1">
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="2*" />
-                                        <ColumnDefinition Width="1.2*" />
-                                        <ColumnDefinition Width="2.5*" />
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock Grid.Column="0"
-                                               Margin="0,0,12,0"
-                                               FontSize="14"
-                                               FontWeight="SemiBold"
-                                               Text="{Binding Name}"
-                                               TextTrimming="CharacterEllipsis" />
-                                    <TextBlock Grid.Column="1"
-                                               Margin="0,0,12,0"
-                                               Foreground="#5F6B7A"
-                                               Text="{Binding IdentificationNumber, TargetNullValue=—}"
-                                               TextTrimming="CharacterEllipsis" />
-                                    <TextBlock Grid.Column="2"
-                                               Foreground="#5F6B7A"
-                                               Text="{Binding Information, TargetNullValue=—}"
-                                               TextTrimming="CharacterEllipsis" />
-                                </Grid>
+                                <TextBlock FontSize="14"
+                                           FontWeight="SemiBold"
+                                           Text="{Binding Name}"
+                                           TextTrimming="CharacterEllipsis" />
                             </Border>
                         </DataTemplate>
                     </ListBox.ItemTemplate>
@@ -274,6 +257,7 @@
                             Padding="12,7"
                             Command="{Binding SaveCustomerCommand}"
                             Content="{Binding EditorSaveText}"
+                            IsDefault="True"
                             FontWeight="SemiBold" />
                 </StackPanel>
             </Grid>

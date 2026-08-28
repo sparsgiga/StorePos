@@ -21,6 +21,7 @@ public sealed class SalesWorkspaceViewModel : ObservableObject, IDisposable
     private readonly AsyncRelayCommand _addManualItemCommand;
     private readonly AsyncRelayCommand _removeSelectedItemCommand;
     private readonly AsyncRelayCommand _cancelSaleCommand;
+    private readonly AsyncRelayCommand _updateDiscountCommand;
     private readonly RelayCommand _editCustomerCommand;
     private readonly RelayCommand _editSelectedItemCommand;
     private readonly RelayCommand _completeSaleCommand;
@@ -54,6 +55,7 @@ public sealed class SalesWorkspaceViewModel : ObservableObject, IDisposable
             RemoveSelectedItemAsync,
             CanModifySelectedItem);
         _cancelSaleCommand = new AsyncRelayCommand(CancelSaleAsync, CanCancelSale);
+        _updateDiscountCommand = new AsyncRelayCommand(UpdateDiscountAsync, CanEditCustomer);
         _editCustomerCommand = new RelayCommand(EditCustomer, CanEditCustomer);
         _editSelectedItemCommand = new RelayCommand(EditSelectedItem, CanModifySelectedItem);
         _completeSaleCommand = new RelayCommand(CompleteSale, CanCompleteSale);
@@ -130,6 +132,73 @@ public sealed class SalesWorkspaceViewModel : ObservableObject, IDisposable
     public ICommand CancelSaleCommand => _cancelSaleCommand;
 
     public ICommand PrintSaleCommand => _printSaleCommand;
+
+    public ICommand UpdateDiscountCommand => _updateDiscountCommand;
+
+    public async Task UpdateItemFinancialsAsync(
+        SaleItemViewModel item,
+        SaleItemInlineField field,
+        string? input)
+    {
+        var sale = SelectedSale;
+        if (sale is null || !DecimalInputParser.TryParse(input, out var value))
+        {
+            item.ResetFinancialInputs();
+            ErrorMessage = "შეიყვანეთ სწორი დადებითი რიცხვი.";
+            return;
+        }
+
+        try
+        {
+            IsBusy = true;
+            ErrorMessage = null;
+            var request = field switch
+            {
+                SaleItemInlineField.Quantity => new UpdateSaleItemFinancialsRequest(
+                    Quantity: value),
+                SaleItemInlineField.UnitPrice => new UpdateSaleItemFinancialsRequest(
+                    UnitPrice: value),
+                SaleItemInlineField.LineTotal => new UpdateSaleItemFinancialsRequest(
+                    LineTotal: value),
+                _ => throw new ArgumentOutOfRangeException(nameof(field))
+            };
+            var result = await _apiClient.UpdateSaleItemFinancialsAsync(
+                sale.Id,
+                item.Id,
+                request,
+                _lifetimeCancellation.Token);
+            item.ApplyUpdate(
+                item.ProductName,
+                result.Quantity,
+                result.UnitPrice,
+                result.LineTotal,
+                item.Comment);
+            sale.ApplyFinancials(
+                result.SaleSubtotal,
+                result.SaleDiscountAmount,
+                result.SaleTotalAmount);
+            if (result.RequestedLineTotalAdjusted)
+            {
+                ErrorMessage = $"შეყვანილი ჯამი დამრგვალდა კანონიკურ მნიშვნელობამდე: {result.LineTotal:N2} ₾.";
+            }
+        }
+        catch (OperationCanceledException) when (_lifetimeCancellation.IsCancellationRequested)
+        {
+            item.ResetFinancialInputs();
+        }
+        catch (Exception exception)
+        {
+            Trace.TraceError(exception.ToString());
+            item.ResetFinancialInputs();
+            ErrorMessage = exception is SaleOperationException
+                ? exception.Message
+                : "ცვლილება ვერ შეინახა. წინა მნიშვნელობები შენარჩუნებულია.";
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
 
     public async Task InitializeAsync()
     {
@@ -217,6 +286,8 @@ public sealed class SalesWorkspaceViewModel : ObservableObject, IDisposable
             var newTab = new SaleTabViewModel(
                 createdSale.SaleId,
                 createdSale.SaleNumber,
+                createdSale.TotalAmount,
+                0m,
                 createdSale.TotalAmount,
                 createdSale.DateCreated,
                 null,
@@ -418,6 +489,51 @@ public sealed class SalesWorkspaceViewModel : ObservableObject, IDisposable
         }
     }
 
+    private async Task UpdateDiscountAsync()
+    {
+        var sale = SelectedSale;
+        if (sale is null ||
+            !DecimalInputParser.TryParse(sale.DiscountText, out var discountAmount))
+        {
+            sale?.ApplyFinancials(
+                sale.Subtotal,
+                sale.DiscountAmount,
+                sale.TotalAmount);
+            ErrorMessage = "ფასდაკლებაში შეიყვანეთ სწორი რიცხვი.";
+            return;
+        }
+
+        try
+        {
+            IsBusy = true;
+            ErrorMessage = null;
+            var result = await _apiClient.UpdateSaleDiscountAsync(
+                sale.Id,
+                discountAmount,
+                _lifetimeCancellation.Token);
+            sale.ApplyFinancials(
+                result.Subtotal,
+                result.DiscountAmount,
+                result.TotalAmount);
+        }
+        catch (OperationCanceledException) when (_lifetimeCancellation.IsCancellationRequested)
+        {
+            sale.ApplyFinancials(sale.Subtotal, sale.DiscountAmount, sale.TotalAmount);
+        }
+        catch (Exception exception)
+        {
+            Trace.TraceError(exception.ToString());
+            sale.ApplyFinancials(sale.Subtotal, sale.DiscountAmount, sale.TotalAmount);
+            ErrorMessage = exception is SaleOperationException
+                ? exception.Message
+                : "ფასდაკლების შენახვა ვერ მოხერხდა.";
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
     private void CompleteSale()
     {
         var sale = SelectedSale;
@@ -509,6 +625,8 @@ public sealed class SalesWorkspaceViewModel : ObservableObject, IDisposable
             }
 
             sale.ApplyDetails(
+                details.Subtotal,
+                details.DiscountAmount,
                 details.TotalAmount,
                 details.CustomerId,
                 details.CustomerName,
@@ -640,6 +758,7 @@ public sealed class SalesWorkspaceViewModel : ObservableObject, IDisposable
         _removeSelectedItemCommand.NotifyCanExecuteChanged();
         _completeSaleCommand.NotifyCanExecuteChanged();
         _cancelSaleCommand.NotifyCanExecuteChanged();
+        _updateDiscountCommand.NotifyCanExecuteChanged();
         _printSaleCommand.NotifyCanExecuteChanged();
     }
 
@@ -661,6 +780,8 @@ public sealed class SalesWorkspaceViewModel : ObservableObject, IDisposable
         => new(
             sale.Id,
             sale.SaleNumber,
+            sale.Subtotal,
+            sale.DiscountAmount,
             sale.TotalAmount,
             sale.DateCreated,
             sale.CustomerId,
@@ -731,4 +852,11 @@ public sealed class SalesWorkspaceViewModel : ObservableObject, IDisposable
 
         ErrorMessage = e.Message;
     }
+}
+
+public enum SaleItemInlineField
+{
+    Quantity,
+    UnitPrice,
+    LineTotal
 }

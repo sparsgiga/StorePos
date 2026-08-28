@@ -52,6 +52,11 @@ public sealed class Sale : AuditableEntity<long>, IAggregateRoot
 
     public decimal TotalAmount { get; private set; }
 
+    public decimal DiscountAmount { get; private set; }
+
+    public decimal Subtotal => FinancialPrecision.SumMoney(
+        _items.Select(item => item.LineTotal));
+
     public string? Comment { get; private set; }
 
     public DateTime? DateCompleted { get; private set; }
@@ -127,6 +132,24 @@ public sealed class Sale : AuditableEntity<long>, IAggregateRoot
         Comment = NormalizeOptionalText(comment, CommentMaxLength, nameof(comment));
     }
 
+    public void UpdateDiscount(decimal discountAmount)
+    {
+        EnsureDraft();
+
+        var normalizedDiscount = FinancialPrecision.RoundMoney(discountAmount);
+        if (normalizedDiscount < 0 ||
+            normalizedDiscount > FinancialPrecision.MaximumMoneyValue)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(discountAmount),
+                "Discount cannot be negative or outside the supported range.");
+        }
+
+        EnsureDiscountFitsSubtotal(Subtotal, normalizedDiscount);
+        DiscountAmount = normalizedDiscount;
+        RecalculateTotal();
+    }
+
     public SaleItem AddManualItem(
         string productName,
         decimal quantity,
@@ -198,10 +221,33 @@ public sealed class Sale : AuditableEntity<long>, IAggregateRoot
         EnsureDraft();
 
         var item = GetItem(saleItemId);
+        var candidate = SaleItem.NormalizeFinancials(quantity, unitPrice);
+        EnsureDiscountFitsSubtotal(CalculateSubtotalAfterChange(item, candidate.LineTotal));
         item.UpdateDetails(productName, quantity, unitPrice, comment);
         RecalculateTotal();
 
         return item;
+    }
+
+    public SaleItem UpdateItemQuantity(long saleItemId, decimal quantity)
+    {
+        var item = GetDraftItem(saleItemId);
+        return UpdateItemFinancials(item, quantity, item.UnitPrice);
+    }
+
+    public SaleItem UpdateItemUnitPrice(long saleItemId, decimal unitPrice)
+    {
+        var item = GetDraftItem(saleItemId);
+        return UpdateItemFinancials(item, item.Quantity, unitPrice);
+    }
+
+    public SaleItem UpdateItemLineTotal(long saleItemId, decimal requestedLineTotal)
+    {
+        var item = GetDraftItem(saleItemId);
+        var unitPrice = SaleItem.CalculateUnitPriceForLineTotal(
+            item.Quantity,
+            requestedLineTotal);
+        return UpdateItemFinancials(item, item.Quantity, unitPrice);
     }
 
     public SaleItem RemoveItem(long saleItemId)
@@ -209,6 +255,8 @@ public sealed class Sale : AuditableEntity<long>, IAggregateRoot
         EnsureDraft();
 
         var item = GetItem(saleItemId);
+        EnsureDiscountFitsSubtotal(FinancialPrecision.SumMoney(
+            [Subtotal, -item.LineTotal]));
         _items.Remove(item);
         RecalculateTotal();
 
@@ -389,8 +437,9 @@ public sealed class Sale : AuditableEntity<long>, IAggregateRoot
 
     private void RecalculateTotal()
     {
-        TotalAmount = FinancialPrecision.SumMoney(
-            _items.Select(item => item.LineTotal));
+        var subtotal = Subtotal;
+        EnsureDiscountFitsSubtotal(subtotal);
+        TotalAmount = FinancialPrecision.SumMoney([subtotal, -DiscountAmount]);
 
         if (CompletionVersion == 0)
         {
@@ -400,6 +449,36 @@ public sealed class Sale : AuditableEntity<long>, IAggregateRoot
         }
 
         RefreshOutstandingAmount();
+    }
+
+    private SaleItem GetDraftItem(long saleItemId)
+    {
+        EnsureDraft();
+        return GetItem(saleItemId);
+    }
+
+    private SaleItem UpdateItemFinancials(
+        SaleItem item,
+        decimal quantity,
+        decimal unitPrice)
+    {
+        var candidate = SaleItem.NormalizeFinancials(quantity, unitPrice);
+        EnsureDiscountFitsSubtotal(CalculateSubtotalAfterChange(item, candidate.LineTotal));
+        item.UpdateFinancials(candidate.Quantity, candidate.UnitPrice);
+        RecalculateTotal();
+        return item;
+    }
+
+    private decimal CalculateSubtotalAfterChange(SaleItem item, decimal newLineTotal)
+        => FinancialPrecision.SumMoney([Subtotal, -item.LineTotal, newLineTotal]);
+
+    private void EnsureDiscountFitsSubtotal(decimal subtotal, decimal? discount = null)
+    {
+        if ((discount ?? DiscountAmount) > subtotal)
+        {
+            throw new InvalidOperationException(
+                "Discount cannot be greater than the product subtotal.");
+        }
     }
 
     private void RefreshOutstandingAmount()

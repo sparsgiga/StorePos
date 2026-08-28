@@ -8,6 +8,9 @@ public sealed class SaleItemViewModel : ObservableObject
     private decimal _quantity;
     private decimal _unitPrice;
     private decimal _lineTotal;
+    private string _quantityInput;
+    private string _unitPriceInput;
+    private string _lineTotalInput;
     private string? _comment;
 
     public SaleItemViewModel(
@@ -34,6 +37,9 @@ public sealed class SaleItemViewModel : ObservableObject
         _quantity = quantity;
         _unitPrice = unitPrice;
         _lineTotal = lineTotal;
+        _quantityInput = DecimalInputParser.Format(quantity);
+        _unitPriceInput = DecimalInputParser.Format(unitPrice);
+        _lineTotalInput = lineTotal.ToString("0.00");
         IsManual = isManual;
         _comment = comment;
     }
@@ -74,6 +80,24 @@ public sealed class SaleItemViewModel : ObservableObject
         private set => SetProperty(ref _lineTotal, value);
     }
 
+    public string QuantityInput
+    {
+        get => _quantityInput;
+        set => SetProperty(ref _quantityInput, value);
+    }
+
+    public string UnitPriceInput
+    {
+        get => _unitPriceInput;
+        set => SetProperty(ref _unitPriceInput, value);
+    }
+
+    public string LineTotalInput
+    {
+        get => _lineTotalInput;
+        set => SetProperty(ref _lineTotalInput, value);
+    }
+
     public bool IsManual { get; }
 
     public string? Comment
@@ -93,6 +117,14 @@ public sealed class SaleItemViewModel : ObservableObject
         Quantity = quantity;
         UnitPrice = unitPrice;
         LineTotal = lineTotal;
+        ResetFinancialInputs();
         Comment = comment;
+    }
+
+    public void ResetFinancialInputs()
+    {
+        QuantityInput = DecimalInputParser.Format(Quantity);
+        UnitPriceInput = DecimalInputParser.Format(UnitPrice);
+        LineTotalInput = LineTotal.ToString("0.00");
     }
 }

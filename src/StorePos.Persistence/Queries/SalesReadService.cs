@@ -5,6 +5,7 @@ using StorePos.Application.Sales.Queries.GetDetails;
 using StorePos.Application.Sales.Queries.GetHistory;
 using StorePos.Application.Sales.Queries.GetSoldProducts;
 using StorePos.Domain.Aggregates.Sale;
+using StorePos.Domain.Common;
 using StorePos.Domain.Enums;
 using StorePos.Persistence.Context;
 
@@ -229,6 +230,7 @@ public sealed class SalesReadService(StorePosDbContext context) : ISalesReadServ
                 currentSale.CustomerName,
                 currentSale.CustomerIdentificationNumber,
                 currentSale.Comment,
+                currentSale.DiscountAmount,
                 currentSale.TotalAmount,
                 currentSale.PaidAmount,
                 currentSale.OutstandingAmount,
@@ -292,6 +294,8 @@ public sealed class SalesReadService(StorePosDbContext context) : ISalesReadServ
             sale.CustomerName,
             sale.CustomerIdentificationNumber,
             sale.Comment,
+            FinancialPrecision.SumMoney([sale.TotalAmount, sale.DiscountAmount]),
+            sale.DiscountAmount,
             sale.TotalAmount,
             sale.PaidAmount,
             sale.OutstandingAmount,

@@ -1,4 +1,5 @@
 using System.Windows;
+using System.Windows.Input;
 using StorePos.Desktop.Sales.Dialogs;
 using StorePos.Desktop.Sales.ViewModels;
 
@@ -34,5 +35,14 @@ public partial class CustomerInfoDialog : Window
         Loaded -= OnLoaded;
         _viewModel.CloseRequested -= OnCloseRequested;
         _viewModel.Dispose();
+    }
+
+    private void OnCustomerDoubleClick(object sender, MouseButtonEventArgs e)
+    {
+        if (_viewModel.SelectCustomerCommand.CanExecute(null))
+        {
+            _viewModel.SelectCustomerCommand.Execute(null);
+            e.Handled = true;
+        }
     }
 }

@@ -52,19 +52,32 @@
                         Command="{Binding EditCustomerCommand}"
                         Content="შეცვლა" />
 
-                <StackPanel DockPanel.Dock="Right"
-                            MaxWidth="360"
-                            VerticalAlignment="Center"
-                            Orientation="Horizontal">
-                    <TextBlock Margin="0,0,6,0"
-                               VerticalAlignment="Center"
-                               FontWeight="SemiBold"
-                               Text="მყიდველი:" />
-                    <TextBlock VerticalAlignment="Center"
-                               Text="{Binding SelectedSale.CustomerName, TargetNullValue=არ არის მითითებული}"
-                               TextTrimming="CharacterEllipsis"
-                               ToolTip="{Binding SelectedSale.CustomerName}" />
-                </StackPanel>
+                <Border DockPanel.Dock="Right"
+                        MaxWidth="390"
+                        Padding="10,4"
+                        VerticalAlignment="Center"
+                        BorderThickness="1"
+                        CornerRadius="4">
+                    <Border.Style>
+                        <Style TargetType="Border">
+                            <Setter Property="Background" Value="#FDECEC" />
+                            <Setter Property="BorderBrush" Value="#D92D20" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding SelectedSale.HasAssignedCustomer}" Value="True">
+                                    <Setter Property="Background" Value="#E8F7EE" />
+                                    <Setter Property="BorderBrush" Value="#16794A" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Margin="0,0,6,0" FontWeight="SemiBold" Text="მყიდველი:" />
+                        <TextBlock FontWeight="SemiBold"
+                                   Text="{Binding SelectedSale.CustomerStatusText}"
+                                   TextTrimming="CharacterEllipsis"
+                                   ToolTip="{Binding SelectedSale.CustomerStatusText}" />
+                    </StackPanel>
+                </Border>
 
                 <TextBlock VerticalAlignment="Center"
                            FontSize="19"
@@ -314,7 +327,8 @@
                             </Border>
 
                             <Grid Grid.Row="2">
-                                <DataGrid ItemsSource="{Binding Items}"
+                                <DataGrid x:Name="SaleItemsGrid"
+                                          ItemsSource="{Binding Items}"
                                           SelectedItem="{Binding DataContext.SelectedItem, RelativeSource={RelativeSource AncestorType=UserControl}, Mode=TwoWay}"
                                           AutoGenerateColumns="False"
                                           CanUserAddRows="False"
@@ -323,47 +337,62 @@
                                           EnableColumnVirtualization="True"
                                           EnableRowVirtualization="True"
                                           HeadersVisibility="Column"
-                                          IsReadOnly="True"
+                                          IsReadOnly="False"
+                                          CellEditEnding="OnSaleItemCellEditEnding"
+                                          PreviewMouseLeftButtonUp="OnSaleItemCellMouseUp"
                                           PreviewKeyDown="OnSaleItemsPreviewKeyDown"
                                           RowHeight="25"
                                           ScrollViewer.HorizontalScrollBarVisibility="Auto"
                                           ScrollViewer.VerticalScrollBarVisibility="Auto"
                                           SelectionMode="Single"
-                                          SelectionUnit="FullRow"
+                                          SelectionUnit="CellOrRowHeader"
                                           VirtualizingPanel.IsVirtualizing="True"
                                           VirtualizingPanel.VirtualizationMode="Recycling">
                                     <DataGrid.Columns>
                                         <DataGridTextColumn Width="90"
+                                                            IsReadOnly="True"
+                                                            SortMemberPath="ProductCode"
                                                             ElementStyle="{StaticResource TrimmedCellText}"
                                                             Header="კოდი"
                                                             Binding="{Binding ProductCode}" />
                                         <DataGridTextColumn Width="135"
+                                                            IsReadOnly="True"
+                                                            SortMemberPath="Barcode"
                                                             ElementStyle="{StaticResource TrimmedCellText}"
                                                             Header="შტრიხკოდი"
                                                             Binding="{Binding Barcode}" />
                                         <DataGridTextColumn Width="3*"
                                                             MinWidth="180"
+                                                            IsReadOnly="True"
+                                                            SortMemberPath="ProductName"
                                                             ElementStyle="{StaticResource TrimmedCellText}"
                                                             Header="დასახელება"
                                                             Binding="{Binding ProductName}" />
                                         <DataGridTextColumn Width="75"
+                                                            IsReadOnly="True"
+                                                            SortMemberPath="MeasurementUnitName"
                                                             ElementStyle="{StaticResource TrimmedCellText}"
                                                             Header="ერთეული"
                                                             Binding="{Binding MeasurementUnitName}" />
                                         <DataGridTextColumn Width="95"
                                                             ElementStyle="{StaticResource RightAlignedCellText}"
+                                                            SortMemberPath="Quantity"
                                                             Header="რაოდენობა"
-                                                            Binding="{Binding Quantity, Converter={StaticResource DecimalDisplayConverter}}" />
+                                                            Binding="{Binding QuantityInput, Mode=TwoWay}" />
                                         <DataGridTextColumn Width="95"
                                                             ElementStyle="{StaticResource RightAlignedCellText}"
+                                                            SortMemberPath="UnitPrice"
                                                             Header="ფასი"
-                                                            Binding="{Binding UnitPrice, Converter={StaticResource DecimalDisplayConverter}}" />
+                                                            Binding="{Binding UnitPriceInput, Mode=TwoWay}" />
                                         <DataGridTextColumn Width="105"
                                                             ElementStyle="{StaticResource RightAlignedCellText}"
+                                                            SortMemberPath="LineTotal"
                                                             Header="ჯამი"
-                                                            Binding="{Binding LineTotal, StringFormat={}{0:N2}}" />
+                                                            Binding="{Binding LineTotalInput, Mode=TwoWay}" />
                                         <DataGridTextColumn Width="2*"
                                                             MinWidth="120"
+                                                            IsReadOnly="True"
+                                                            SortMemberPath="Comment"
                                                             ElementStyle="{StaticResource TrimmedCellText}"
                                                             Header="კომენტარი"
                                                             Binding="{Binding Comment}" />
@@ -429,14 +458,41 @@
                                                 Content="გაყიდვის დასრულება"
                                                 Foreground="White"
                                                 FontWeight="SemiBold" />
-                                        <TextBlock VerticalAlignment="Center"
-                                                   FontSize="17"
-                                                   Text="ჯამი:" />
-                                        <TextBlock Margin="10,0,0,0"
-                                                   VerticalAlignment="Center"
-                                                   FontSize="23"
-                                                   FontWeight="Bold"
-                                                   Text="{Binding TotalAmount, StringFormat={}{0:N2} ₾}" />
+                                        <Grid VerticalAlignment="Center">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="105" />
+                                            </Grid.ColumnDefinitions>
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto" />
+                                                <RowDefinition Height="Auto" />
+                                                <RowDefinition Height="Auto" />
+                                            </Grid.RowDefinitions>
+                                            <TextBlock Margin="0,0,8,2" Text="პროდუქტების ჯამი" />
+                                            <TextBlock Grid.Column="1" HorizontalAlignment="Right"
+                                                       Text="{Binding Subtotal, StringFormat={}{0:N2} ₾}" />
+                                            <TextBlock Grid.Row="1" Margin="0,0,8,2" Text="ფასდაკლება" />
+                                            <TextBox Grid.Row="1" Grid.Column="1"
+                                                     Padding="5,2"
+                                                     HorizontalContentAlignment="Right"
+                                                     Text="{Binding DiscountText, UpdateSourceTrigger=PropertyChanged}">
+                                                <TextBox.InputBindings>
+                                                    <KeyBinding Key="Enter"
+                                                                Command="{Binding DataContext.UpdateDiscountCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" />
+                                                </TextBox.InputBindings>
+                                            </TextBox>
+                                            <TextBlock Grid.Row="2" Margin="0,3,8,0"
+                                                       VerticalAlignment="Center"
+                                                       FontSize="17"
+                                                       FontWeight="SemiBold"
+                                                       Text="გადასახდელი" />
+                                            <TextBlock Grid.Row="2" Grid.Column="1" Margin="0,3,0,0"
+                                                       HorizontalAlignment="Right"
+                                                       VerticalAlignment="Center"
+                                                       FontSize="23"
+                                                       FontWeight="Bold"
+                                                       Text="{Binding TotalAmount, StringFormat={}{0:N2} ₾}" />
+                                        </Grid>
                                     </StackPanel>
                                 </DockPanel>
                             </Border>

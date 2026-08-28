@@ -29,6 +29,8 @@ public sealed class SaleReportModelFactoryTests
         Assert.Equal(2.5m, item.Quantity);
         Assert.Equal(45.31m, item.LineTotal);
         Assert.Equal(1000m, report.TotalAmount);
+        Assert.Equal(1000m, report.Subtotal);
+        Assert.Equal(0m, report.DiscountAmount);
         Assert.Equal(700m, report.PaidAmount);
         Assert.Equal(300m, report.OutstandingAmount);
         Assert.Equal(500m, report.CashAmount);
@@ -54,8 +56,10 @@ public sealed class SaleReportModelFactoryTests
     public void CurrentReopenedDraft_UsesPersistedSnapshotAndEffectiveAllocation()
     {
         var sale = new SaleTabViewModel(
-            1, "20260826-0002", 1000m, DateTime.Now, 10, "Customer");
+            1, "20260826-0002", 1000m, 0m, 1000m, DateTime.Now, 10, "Customer");
         sale.ApplyDetails(
+            1000m,
+            0m,
             1000m,
             10,
             "Customer",
@@ -91,6 +95,8 @@ public sealed class SaleReportModelFactoryTests
             "Customer",
             "0101",
             "Comment",
+            1000m,
+            0m,
             1000m,
             700m,
             300m,

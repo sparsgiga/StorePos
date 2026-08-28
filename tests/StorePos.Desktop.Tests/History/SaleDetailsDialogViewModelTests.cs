@@ -108,6 +108,8 @@ public sealed class SaleDetailsDialogViewModelTests
             null,
             null,
             200m,
+            0m,
+            200m,
             100m,
             100m,
             true,

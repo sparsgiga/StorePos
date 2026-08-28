@@ -271,6 +271,17 @@ public sealed class StorePosApiClient(HttpClient httpClient) : IStorePosApiClien
                ?? [];
     }
 
+    public async Task<IReadOnlyList<CustomerDto>> GetCustomersAsync(
+        CancellationToken cancellationToken = default)
+    {
+        using var response = await httpClient.GetAsync("api/customers", cancellationToken);
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<CustomerDto[]>(
+                   JsonOptions,
+                   cancellationToken)
+               ?? [];
+    }
+
     public async Task<CustomerDto> GetCustomerAsync(
         long customerId,
         CancellationToken cancellationToken = default)
@@ -324,7 +335,7 @@ public sealed class StorePosApiClient(HttpClient httpClient) : IStorePosApiClien
             new AssignCustomerToSaleRequest(customerId),
             JsonOptions,
             cancellationToken);
-
+        await ThrowIfSaleOperationConflictAsync(response, cancellationToken);
         response.EnsureSuccessStatusCode();
 
         return await response.Content.ReadFromJsonAsync<SaleCustomerResponse>(
@@ -378,12 +389,52 @@ public sealed class StorePosApiClient(HttpClient httpClient) : IStorePosApiClien
             JsonOptions,
             cancellationToken);
 
+        await ThrowIfSaleOperationConflictAsync(response, cancellationToken);
         response.EnsureSuccessStatusCode();
 
         return await response.Content.ReadFromJsonAsync<UpdateSaleItemResponse>(
                    JsonOptions,
                    cancellationToken)
                ?? throw new InvalidOperationException("The API returned an empty update-item response.");
+    }
+
+    public async Task<UpdateSaleItemFinancialsResponse> UpdateSaleItemFinancialsAsync(
+        long saleId,
+        long saleItemId,
+        UpdateSaleItemFinancialsRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        using var message = new HttpRequestMessage(
+            HttpMethod.Patch,
+            $"api/sales/{saleId}/items/{saleItemId}/financials")
+        {
+            Content = JsonContent.Create(request, options: JsonOptions)
+        };
+        using var response = await httpClient.SendAsync(message, cancellationToken);
+        await ThrowIfSaleOperationConflictAsync(response, cancellationToken);
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<UpdateSaleItemFinancialsResponse>(
+                   JsonOptions,
+                   cancellationToken)
+               ?? throw new InvalidOperationException("The API returned an empty financial update response.");
+    }
+
+    public async Task<UpdateSaleDiscountResponse> UpdateSaleDiscountAsync(
+        long saleId,
+        decimal discountAmount,
+        CancellationToken cancellationToken = default)
+    {
+        using var response = await httpClient.PutAsJsonAsync(
+            $"api/sales/{saleId}/discount",
+            new UpdateSaleDiscountRequest(discountAmount),
+            JsonOptions,
+            cancellationToken);
+        await ThrowIfSaleOperationConflictAsync(response, cancellationToken);
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<UpdateSaleDiscountResponse>(
+                   JsonOptions,
+                   cancellationToken)
+               ?? throw new InvalidOperationException("The API returned an empty discount response.");
     }
 
     public async Task<RemoveSaleItemResponse> RemoveSaleItemAsync(
@@ -394,7 +445,7 @@ public sealed class StorePosApiClient(HttpClient httpClient) : IStorePosApiClien
         using var response = await httpClient.DeleteAsync(
             $"api/sales/{saleId}/items/{saleItemId}",
             cancellationToken);
-
+        await ThrowIfSaleOperationConflictAsync(response, cancellationToken);
         response.EnsureSuccessStatusCode();
 
         return await response.Content.ReadFromJsonAsync<RemoveSaleItemResponse>(

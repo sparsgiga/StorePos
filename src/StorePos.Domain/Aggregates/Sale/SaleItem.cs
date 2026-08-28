@@ -182,6 +182,37 @@ public sealed class SaleItem : AuditableEntity<long>
                 nameof(productName));
         }
 
+        var financials = NormalizeFinancials(quantity, unitPrice);
+
+        if (normalizedComment?.Length > CommentMaxLength)
+        {
+            throw new ArgumentException(
+                $"Comment cannot exceed {CommentMaxLength} characters.",
+                nameof(comment));
+        }
+
+        if (IsManual || string.IsNullOrEmpty(ProductName))
+        {
+            ProductName = normalizedProductName;
+        }
+
+        Quantity = financials.Quantity;
+        UnitPrice = financials.UnitPrice;
+        LineTotal = financials.LineTotal;
+        Comment = normalizedComment;
+    }
+
+    internal void UpdateFinancials(decimal quantity, decimal unitPrice)
+    {
+        var financials = NormalizeFinancials(quantity, unitPrice);
+        Quantity = financials.Quantity;
+        UnitPrice = financials.UnitPrice;
+        LineTotal = financials.LineTotal;
+    }
+
+    internal static (decimal Quantity, decimal UnitPrice, decimal LineTotal)
+        NormalizeFinancials(decimal quantity, decimal unitPrice)
+    {
         var normalizedQuantity = FinancialPrecision.RoundQuantity(quantity);
         if (normalizedQuantity <= 0 ||
             normalizedQuantity > FinancialPrecision.MaximumFiveScaleValue)
@@ -200,22 +231,50 @@ public sealed class SaleItem : AuditableEntity<long>
                 $"Unit price must be at least {MinimumUnitPrice}.");
         }
 
-        if (normalizedComment?.Length > CommentMaxLength)
+        return (
+            normalizedQuantity,
+            normalizedUnitPrice,
+            FinancialPrecision.CalculateLineTotal(
+                normalizedQuantity,
+                normalizedUnitPrice));
+    }
+
+    internal static decimal CalculateUnitPriceForLineTotal(
+        decimal quantity,
+        decimal requestedLineTotal)
+    {
+        var normalizedQuantity = FinancialPrecision.RoundQuantity(quantity);
+        if (normalizedQuantity <= 0)
         {
-            throw new ArgumentException(
-                $"Comment cannot exceed {CommentMaxLength} characters.",
-                nameof(comment));
+            throw new ArgumentOutOfRangeException(
+                nameof(quantity),
+                "Quantity must be greater than zero.");
         }
 
-        if (IsManual || string.IsNullOrEmpty(ProductName))
+        var normalizedLineTotal = FinancialPrecision.RoundMoney(requestedLineTotal);
+        if (normalizedLineTotal < 0.01m ||
+            normalizedLineTotal > FinancialPrecision.MaximumMoneyValue)
         {
-            ProductName = normalizedProductName;
+            throw new ArgumentOutOfRangeException(
+                nameof(requestedLineTotal),
+                "Line total must be at least 0.01 GEL and within the supported range.");
         }
 
-        Quantity = normalizedQuantity;
-        UnitPrice = normalizedUnitPrice;
-        LineTotal = FinancialPrecision.CalculateLineTotal(Quantity, UnitPrice);
-        Comment = normalizedComment;
+        decimal unitPrice;
+        try
+        {
+            unitPrice = FinancialPrecision.RoundUnitPrice(
+                normalizedLineTotal / normalizedQuantity);
+        }
+        catch (OverflowException)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(requestedLineTotal),
+                "Line total is too large.");
+        }
+
+        _ = NormalizeFinancials(normalizedQuantity, unitPrice);
+        return unitPrice;
     }
 
     private static string NormalizeRequiredText(

@@ -73,6 +73,19 @@ public partial class SalesWorkspaceView : UserControl
             return;
         }
 
+        if (e.Key == Key.Enter &&
+            sender is DataGrid grid &&
+            grid.CurrentColumn is { IsReadOnly: true })
+        {
+            var editCommand = viewModel.EditSelectedItemCommand;
+            if (editCommand.CanExecute(null))
+            {
+                editCommand.Execute(null);
+                e.Handled = true;
+            }
+            return;
+        }
+
         var command = e.Key switch
         {
             Key.F2 => viewModel.EditSelectedItemCommand,
@@ -87,6 +100,40 @@ public partial class SalesWorkspaceView : UserControl
 
         command.Execute(null);
         e.Handled = true;
+    }
+
+    private async void OnSaleItemCellEditEnding(
+        object sender,
+        DataGridCellEditEndingEventArgs e)
+    {
+        if (e.EditAction != DataGridEditAction.Commit ||
+            e.Row.Item is not SaleItemViewModel item ||
+            e.EditingElement is not TextBox editor ||
+            DataContext is not SalesWorkspaceViewModel viewModel ||
+            !TryGetInlineField(e.Column.SortMemberPath, out var field))
+        {
+            return;
+        }
+
+        await viewModel.UpdateItemFinancialsAsync(item, field, editor.Text);
+    }
+
+    private void OnSaleItemCellMouseUp(object sender, MouseButtonEventArgs e)
+    {
+        var cell = FindAncestor<DataGridCell>(e.OriginalSource as DependencyObject);
+        if (cell is null || !cell.Column.IsReadOnly ||
+            FindAncestor<DataGridRow>(cell) is not { Item: SaleItemViewModel item } ||
+            DataContext is not SalesWorkspaceViewModel viewModel)
+        {
+            return;
+        }
+
+        viewModel.SelectedItem = item;
+        if (viewModel.EditSelectedItemCommand.CanExecute(null))
+        {
+            viewModel.EditSelectedItemCommand.Execute(null);
+            e.Handled = true;
+        }
     }
 
     private void OnProductSearchResultDoubleClick(object sender, MouseButtonEventArgs e)
@@ -120,5 +167,35 @@ public partial class SalesWorkspaceView : UserControl
         }
 
         return null;
+    }
+
+    private static T? FindAncestor<T>(DependencyObject? child)
+        where T : DependencyObject
+    {
+        while (child is not null)
+        {
+            if (child is T match)
+            {
+                return match;
+            }
+            child = VisualTreeHelper.GetParent(child);
+        }
+        return null;
+    }
+
+    private static bool TryGetInlineField(
+        string? sortMemberPath,
+        out SaleItemInlineField field)
+    {
+        field = sortMemberPath switch
+        {
+            nameof(SaleItemViewModel.Quantity) => SaleItemInlineField.Quantity,
+            nameof(SaleItemViewModel.UnitPrice) => SaleItemInlineField.UnitPrice,
+            nameof(SaleItemViewModel.LineTotal) => SaleItemInlineField.LineTotal,
+            _ => default
+        };
+        return sortMemberPath is nameof(SaleItemViewModel.Quantity) or
+            nameof(SaleItemViewModel.UnitPrice) or
+            nameof(SaleItemViewModel.LineTotal);
     }
 }

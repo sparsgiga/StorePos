@@ -51,6 +51,8 @@ public sealed class SaleDocumentFactoryTests
             null,
             DateTime.Now,
             count * 10m,
+            0m,
+            count * 10m,
             count * 10m,
             0m,
             count * 10m,

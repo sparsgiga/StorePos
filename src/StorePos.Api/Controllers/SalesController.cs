@@ -9,6 +9,7 @@ using StorePos.Application.Sales.Commands.CreateDraft;
 using StorePos.Application.Sales.Commands.RemoveCustomer;
 using StorePos.Application.Sales.Commands.Reopen;
 using StorePos.Application.Sales.Commands.UpdateComment;
+using StorePos.Application.Sales.Commands.UpdateDiscount;
 using StorePos.Application.Sales.Queries.GetDetails;
 using StorePos.Application.Sales.Queries.GetDraftDetails;
 using StorePos.Application.Sales.Queries.GetDrafts;
@@ -123,6 +124,18 @@ public sealed class SalesController(ISender sender) : ControllerBase
     {
         var result = await sender.Send(
             new UpdateSaleCommentCommand(saleId, request.Comment), cancellationToken);
+        return result is null ? NotFound() : Ok(result);
+    }
+
+    [HttpPut("{saleId:long}/discount")]
+    public async Task<ActionResult<UpdateSaleDiscountResult>> UpdateDiscount(
+        [FromRoute, Range(1, long.MaxValue)] long saleId,
+        UpdateSaleDiscountRequest request,
+        CancellationToken cancellationToken)
+    {
+        var result = await sender.Send(
+            new UpdateSaleDiscountCommand(saleId, request.DiscountAmount),
+            cancellationToken);
         return result is null ? NotFound() : Ok(result);
     }
 }

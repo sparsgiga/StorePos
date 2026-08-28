@@ -4,6 +4,8 @@ public sealed record DraftSaleDetailsModel(
     long Id,
     string SaleNumber,
     int CompletionVersion,
+    decimal Subtotal,
+    decimal DiscountAmount,
     decimal TotalAmount,
     decimal PaidAmount,
     decimal OutstandingAmount,

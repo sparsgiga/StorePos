@@ -2,6 +2,8 @@ using StorePos.Application.Sales.Commands.Cancel;
 using StorePos.Application.Sales.Commands.Complete;
 using StorePos.Application.Sales.Commands.Reopen;
 using StorePos.Application.Sales.Commands.AddDebtPayment;
+using StorePos.Application.Sales.Commands.UpdateDiscount;
+using StorePos.Application.Sales.Commands.UpdateFinancials;
 using StorePos.Application.Common.Exceptions;
 using StorePos.Domain.Aggregates.Sale;
 using StorePos.Domain.Enums;
@@ -179,6 +181,47 @@ public sealed class SaleLifecycleCommandHandlerTests
                 CancellationToken.None));
 
         Assert.Contains("ფინანსური მდგომარეობა შეიცვალა", exception.Message);
+    }
+
+    [Fact]
+    public async Task UpdateDiscountHandler_ReturnsCanonicalFinancialState()
+    {
+        var sale = Sale.Create("20260828-0001");
+        sale.AddManualItem("A", 1m, 601m);
+        var unitOfWork = new FakeUnitOfWork();
+        var handler = new UpdateSaleDiscountCommandHandler(
+            new FakeSaleRepository(sale),
+            unitOfWork);
+
+        var result = await handler.Handle(
+            new UpdateSaleDiscountCommand(1, 1m),
+            CancellationToken.None);
+
+        Assert.NotNull(result);
+        Assert.Equal(601m, result.Subtotal);
+        Assert.Equal(1m, result.DiscountAmount);
+        Assert.Equal(600m, result.TotalAmount);
+        Assert.Equal(1, unitOfWork.SaveChangesCallCount);
+    }
+
+    [Fact]
+    public async Task InlineLineTotalHandler_DerivesCanonicalUnitPrice()
+    {
+        var sale = Sale.Create("20260828-0002");
+        var item = sale.AddManualItem("A", 3m, 10m);
+        var handler = new UpdateSaleItemFinancialsCommandHandler(
+            new FakeSaleRepository(sale),
+            new FakeUnitOfWork());
+
+        var result = await handler.Handle(
+            new UpdateSaleItemFinancialsCommand(1, item.Id, null, null, 27m),
+            CancellationToken.None);
+
+        Assert.NotNull(result);
+        Assert.Equal(9m, result.UnitPrice);
+        Assert.Equal(27m, result.LineTotal);
+        Assert.Equal(27m, result.SaleSubtotal);
+        Assert.False(result.RequestedLineTotalAdjusted);
     }
 
     private sealed class FakeSaleRepository(Sale? sale) : ISaleRepository

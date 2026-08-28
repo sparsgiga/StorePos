@@ -80,6 +80,9 @@ public interface IStorePosApiClient
         int limit = 20,
         CancellationToken cancellationToken = default);
 
+    Task<IReadOnlyList<CustomerDto>> GetCustomersAsync(
+        CancellationToken cancellationToken = default);
+
     Task<CustomerDto> GetCustomerAsync(
         long customerId,
         CancellationToken cancellationToken = default);
@@ -111,6 +114,17 @@ public interface IStorePosApiClient
         long saleId,
         long saleItemId,
         UpdateSaleItemRequest request,
+        CancellationToken cancellationToken = default);
+
+    Task<UpdateSaleItemFinancialsResponse> UpdateSaleItemFinancialsAsync(
+        long saleId,
+        long saleItemId,
+        UpdateSaleItemFinancialsRequest request,
+        CancellationToken cancellationToken = default);
+
+    Task<UpdateSaleDiscountResponse> UpdateSaleDiscountAsync(
+        long saleId,
+        decimal discountAmount,
         CancellationToken cancellationToken = default);
 
     Task<RemoveSaleItemResponse> RemoveSaleItemAsync(

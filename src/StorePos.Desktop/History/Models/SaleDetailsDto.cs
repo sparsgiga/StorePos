@@ -9,6 +9,8 @@ public sealed record SaleDetailsDto(
     string? CustomerName,
     string? CustomerIdentificationNumber,
     string? Comment,
+    decimal Subtotal,
+    decimal DiscountAmount,
     decimal TotalAmount,
     decimal PaidAmount,
     decimal OutstandingAmount,

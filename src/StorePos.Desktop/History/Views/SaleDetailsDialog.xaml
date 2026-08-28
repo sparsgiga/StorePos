@@ -44,15 +44,23 @@
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
-                <TextBlock Grid.Row="0" Margin="0,0,10,2" Text="ჯამი" />
-                <TextBlock Grid.Row="0" Grid.Column="1" HorizontalAlignment="Right" FontWeight="Bold"
+                <TextBlock Grid.Row="0" Margin="0,0,10,2" Text="პროდუქტების ჯამი" />
+                <TextBlock Grid.Row="0" Grid.Column="1" HorizontalAlignment="Right"
+                           Text="{Binding Subtotal, StringFormat={}{0:N2} ₾}" />
+                <TextBlock Grid.Row="1" Margin="0,0,10,2" Text="ფასდაკლება" />
+                <TextBlock Grid.Row="1" Grid.Column="1" HorizontalAlignment="Right"
+                           Text="{Binding DiscountAmount, StringFormat={}{0:N2} ₾}" />
+                <TextBlock Grid.Row="2" Margin="0,0,10,2" Text="გადასახდელი" />
+                <TextBlock Grid.Row="2" Grid.Column="1" HorizontalAlignment="Right" FontWeight="Bold"
                            Text="{Binding TotalAmount, StringFormat={}{0:N2} ₾}" />
-                <TextBlock Grid.Row="1" Margin="0,0,10,2" Text="გადახდილი" />
-                <TextBlock Grid.Row="1" Grid.Column="1" HorizontalAlignment="Right" FontWeight="SemiBold"
+                <TextBlock Grid.Row="3" Margin="0,0,10,2" Text="გადახდილი" />
+                <TextBlock Grid.Row="3" Grid.Column="1" HorizontalAlignment="Right" FontWeight="SemiBold"
                            Text="{Binding PaidAmount, StringFormat={}{0:N2} ₾}" />
-                <TextBlock Grid.Row="2" Margin="0,0,10,0" Text="ვალი" />
-                <TextBlock Grid.Row="2" Grid.Column="1" HorizontalAlignment="Right"
+                <TextBlock Grid.Row="4" Margin="0,0,10,0" Text="ვალი" />
+                <TextBlock Grid.Row="4" Grid.Column="1" HorizontalAlignment="Right"
                            Text="{Binding OutstandingAmount, StringFormat={}{0:N2} ₾}">
                     <TextBlock.Style>
                         <Style TargetType="TextBlock">

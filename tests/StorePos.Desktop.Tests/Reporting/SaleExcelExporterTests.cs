@@ -35,26 +35,26 @@ public sealed class SaleExcelExporterTests
         var rows = document.Descendants(spreadsheet + "row")
             .ToDictionary(row => (string)row.Attribute("r")!);
 
-        Assert.Equal("გაყიდვა", CellText(rows["2"], spreadsheet, "A2"));
-        Assert.Equal(report.SaleNumber, CellText(rows["2"], spreadsheet, "B2"));
-        Assert.Equal("სტატუსი", CellText(rows["2"], spreadsheet, "C2"));
-        Assert.Equal(report.CustomerName, CellText(rows["2"], spreadsheet, "F2"));
-        Assert.Equal(report.CustomerIdentificationNumber, CellText(rows["2"], spreadsheet, "H2"));
-        Assert.Equal("შექმნილია", CellText(rows["3"], spreadsheet, "A3"));
-        Assert.Equal("დაბეჭდილია", CellText(rows["3"], spreadsheet, "E3"));
-
-        Assert.Equal("კოდი", CellText(rows["4"], spreadsheet, "A4"));
-        Assert.Equal("პროდუქტი", CellText(rows["4"], spreadsheet, "C4"));
-        Assert.Equal("P1", CellText(rows["5"], spreadsheet, "A5"));
-        Assert.Equal("123", CellText(rows["5"], spreadsheet, "B5"));
-        Assert.Equal("Snapshot Product", CellText(rows["5"], spreadsheet, "C5"));
-        Assert.Equal("Long comment", CellText(rows["5"], spreadsheet, "H5"));
+        Assert.Equal("კოდი", CellText(rows["1"], spreadsheet, "A1"));
+        Assert.Equal("პროდუქტი", CellText(rows["1"], spreadsheet, "C1"));
+        Assert.Equal("P1", CellText(rows["2"], spreadsheet, "A2"));
+        Assert.Equal("123", CellText(rows["2"], spreadsheet, "B2"));
+        Assert.Equal("Snapshot Product", CellText(rows["2"], spreadsheet, "C2"));
+        Assert.Equal("Long comment", CellText(rows["2"], spreadsheet, "H2"));
+        Assert.DoesNotContain("3", rows.Keys);
+        Assert.Equal("გაყიდვა", CellText(rows["4"], spreadsheet, "A4"));
+        Assert.Equal(report.SaleNumber, CellText(rows["4"], spreadsheet, "B4"));
+        Assert.Equal("მყიდველი", CellText(rows["5"], spreadsheet, "A5"));
+        Assert.Equal(report.CustomerName, CellText(rows["5"], spreadsheet, "B5"));
+        Assert.Contains("პროდუქტების ჯამი", sheet);
+        Assert.Contains("ფასდაკლება", sheet);
+        Assert.Contains("გადასახდელი", sheet);
 
         var pane = Assert.Single(document.Descendants(spreadsheet + "pane"));
-        Assert.Equal("4", (string?)pane.Attribute("ySplit"));
-        Assert.Equal("A5", (string?)pane.Attribute("topLeftCell"));
+        Assert.Equal("1", (string?)pane.Attribute("ySplit"));
+        Assert.Equal("A2", (string?)pane.Attribute("topLeftCell"));
         var autoFilter = Assert.Single(document.Descendants(spreadsheet + "autoFilter"));
-        Assert.Equal("A4:H5", (string?)autoFilter.Attribute("ref"));
+        Assert.Equal("A1:H2", (string?)autoFilter.Attribute("ref"));
     }
 
     [Fact]
@@ -80,6 +80,8 @@ public sealed class SaleExcelExporterTests
             DateTime.Now,
             null,
             DateTime.Now,
+            1001m,
+            1m,
             1000m,
             700m,
             300m,

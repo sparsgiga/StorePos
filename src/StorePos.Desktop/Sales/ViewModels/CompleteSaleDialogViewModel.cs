@@ -37,13 +37,17 @@ public sealed class CompleteSaleDialogViewModel : ObservableObject
         decimal totalAmount,
         long? customerId,
         CancellationToken cancellationToken,
-        PreviousCompletionPaymentStateDto? previousPaymentState = null)
+        PreviousCompletionPaymentStateDto? previousPaymentState = null,
+        decimal? subtotal = null,
+        decimal discountAmount = 0m)
     {
         _apiClient = apiClient;
         _saleId = saleId;
         _hasCustomer = customerId.HasValue;
         _cancellationToken = cancellationToken;
         TotalAmount = totalAmount;
+        Subtotal = subtotal ?? totalAmount + discountAmount;
+        DiscountAmount = discountAmount;
         _completeCommand = new AsyncRelayCommand(CompleteAsync, () => CanComplete);
         CancelCommand = new RelayCommand(
             () => CloseRequested?.Invoke(this, new DialogCloseRequestedEventArgs(false)));
@@ -54,6 +58,10 @@ public sealed class CompleteSaleDialogViewModel : ObservableObject
     public event EventHandler<DialogCloseRequestedEventArgs>? CloseRequested;
 
     public decimal TotalAmount { get; }
+
+    public decimal Subtotal { get; }
+
+    public decimal DiscountAmount { get; }
 
     public string? CashAmount
     {

@@ -38,6 +38,7 @@
         <DataGrid Grid.Row="2" ItemsSource="{Binding Items}"
                   AutoGenerateColumns="False" CanUserAddRows="False"
                   IsReadOnly="False" HeadersVisibility="Column"
+                  PreviewKeyDown="OnItemsPreviewKeyDown"
                   EnableRowVirtualization="True" EnableColumnVirtualization="True">
             <DataGrid.Columns>
                 <DataGridCheckBoxColumn Width="70" Header="არჩევა"
@@ -81,7 +82,7 @@
 
         <StackPanel Grid.Row="4" HorizontalAlignment="Right" Orientation="Horizontal">
             <Button MinWidth="135" Margin="0,0,8,0" Padding="12,6"
-                    Command="{Binding PreviewCommand}" Content="გადახედვა" />
+                    Command="{Binding PreviewCommand}" Content="გადახედვა" IsDefault="True" />
             <Button MinWidth="90" Padding="12,6" IsCancel="True" Content="დახურვა" />
         </StackPanel>
     </Grid>
