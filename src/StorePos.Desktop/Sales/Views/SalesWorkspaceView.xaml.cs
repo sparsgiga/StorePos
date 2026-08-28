@@ -118,6 +118,19 @@ public partial class SalesWorkspaceView : UserControl
         await viewModel.UpdateItemFinancialsAsync(item, field, editor.Text);
     }
 
+    private void OnDiscountLostKeyboardFocus(
+        object sender,
+        KeyboardFocusChangedEventArgs e)
+    {
+        if (DataContext is not SalesWorkspaceViewModel viewModel ||
+            !viewModel.UpdateDiscountCommand.CanExecute(null))
+        {
+            return;
+        }
+
+        viewModel.UpdateDiscountCommand.Execute(null);
+    }
+
     private void OnSaleItemCellMouseUp(object sender, MouseButtonEventArgs e)
     {
         var cell = FindAncestor<DataGridCell>(e.OriginalSource as DependencyObject);

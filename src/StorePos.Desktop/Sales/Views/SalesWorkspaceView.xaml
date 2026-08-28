@@ -461,7 +461,7 @@
                                         <Grid VerticalAlignment="Center">
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="Auto" />
-                                                <ColumnDefinition Width="105" />
+                                                <ColumnDefinition Width="135" />
                                             </Grid.ColumnDefinitions>
                                             <Grid.RowDefinitions>
                                                 <RowDefinition Height="Auto" />
@@ -475,6 +475,7 @@
                                             <TextBox Grid.Row="1" Grid.Column="1"
                                                      Padding="5,2"
                                                      HorizontalContentAlignment="Right"
+                                                     LostKeyboardFocus="OnDiscountLostKeyboardFocus"
                                                      Text="{Binding DiscountText, UpdateSourceTrigger=PropertyChanged}">
                                                 <TextBox.InputBindings>
                                                     <KeyBinding Key="Enter"

@@ -503,6 +503,16 @@ public sealed class SalesWorkspaceViewModel : ObservableObject, IDisposable
             return;
         }
 
+        if (discountAmount == sale.DiscountAmount)
+        {
+            sale.ApplyFinancials(
+                sale.Subtotal,
+                sale.DiscountAmount,
+                sale.TotalAmount);
+            ErrorMessage = null;
+            return;
+        }
+
         try
         {
             IsBusy = true;
