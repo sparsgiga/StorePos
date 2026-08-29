@@ -29,11 +29,7 @@ public sealed class ProductReadService(StorePosDbContext context) : IProductRead
                 from product in products
                 join unit in context.MeasurementUnits.AsNoTracking()
                     on product.MeasurementUnitId equals unit.Id
-                orderby product.Barcode == query descending,
-                    product.Code == query descending,
-                    product.Code.StartsWith(query) descending,
-                    product.Name.StartsWith(query) descending,
-                    product.Name,
+                orderby product.Price > 0 descending,
                     product.Id
                 select new ProductSearchResult(
                     product.Id,

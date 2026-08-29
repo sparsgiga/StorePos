@@ -294,8 +294,10 @@ public sealed class SalesWorkspaceViewModel : ObservableObject, IDisposable
                 createdSale.CustomerName,
                 isDetailsLoaded: true);
 
+            newTab.SetRecentlyCreated(true);
             OpenSales.Add(newTab);
             SelectedSale = newTab;
+            _ = ClearNewSaleHighlightAsync(newTab);
         }
         catch (OperationCanceledException) when (_lifetimeCancellation.IsCancellationRequested)
         {
@@ -308,6 +310,18 @@ public sealed class SalesWorkspaceViewModel : ObservableObject, IDisposable
         finally
         {
             IsBusy = false;
+        }
+    }
+
+    private async Task ClearNewSaleHighlightAsync(SaleTabViewModel sale)
+    {
+        try
+        {
+            await Task.Delay(TimeSpan.FromSeconds(4), _lifetimeCancellation.Token);
+            sale.SetRecentlyCreated(false);
+        }
+        catch (OperationCanceledException) when (_lifetimeCancellation.IsCancellationRequested)
+        {
         }
     }
 

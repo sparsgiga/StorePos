@@ -3,6 +3,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
+using StorePos.Desktop.Products.Models;
 using StorePos.Desktop.Sales.ViewModels;
 
 namespace StorePos.Desktop.Sales.Views;
@@ -118,6 +119,44 @@ public partial class SalesWorkspaceView : UserControl
         await viewModel.UpdateItemFinancialsAsync(item, field, editor.Text);
     }
 
+    private void OnSaleItemCurrentCellChanged(object? sender, EventArgs e)
+    {
+        if (sender is DataGrid { CurrentItem: SaleItemViewModel item } &&
+            DataContext is SalesWorkspaceViewModel viewModel)
+        {
+            viewModel.SelectedItem = item;
+        }
+    }
+
+    private void OnSaleItemSelectedCellsChanged(
+        object sender,
+        SelectedCellsChangedEventArgs e)
+    {
+        var item = e.AddedCells
+            .Select(cell => cell.Item)
+            .OfType<SaleItemViewModel>()
+            .LastOrDefault();
+
+        if (item is not null && DataContext is SalesWorkspaceViewModel viewModel)
+        {
+            viewModel.SelectedItem = item;
+        }
+    }
+
+    private void OnSaleItemPreviewMouseLeftButtonDown(
+        object sender,
+        MouseButtonEventArgs e)
+    {
+        if (FindAncestor<DataGridRow>(e.OriginalSource as DependencyObject)
+                is not { Item: SaleItemViewModel item } ||
+            DataContext is not SalesWorkspaceViewModel viewModel)
+        {
+            return;
+        }
+
+        viewModel.SelectedItem = item;
+    }
+
     private void OnDiscountLostKeyboardFocus(
         object sender,
         KeyboardFocusChangedEventArgs e)
@@ -131,7 +170,7 @@ public partial class SalesWorkspaceView : UserControl
         viewModel.UpdateDiscountCommand.Execute(null);
     }
 
-    private void OnSaleItemCellMouseUp(object sender, MouseButtonEventArgs e)
+    private void OnSaleItemCellDoubleClick(object sender, MouseButtonEventArgs e)
     {
         var cell = FindAncestor<DataGridCell>(e.OriginalSource as DependencyObject);
         if (cell is null || !cell.Column.IsReadOnly ||
@@ -151,14 +190,31 @@ public partial class SalesWorkspaceView : UserControl
 
     private void OnProductSearchResultDoubleClick(object sender, MouseButtonEventArgs e)
     {
-        if (DataContext is not SalesWorkspaceViewModel viewModel ||
-            viewModel.ProductSearch.AddSelectedCommand.CanExecute(null) != true)
+        var clickedItem = FindAncestor<ListBoxItem>(e.OriginalSource as DependencyObject);
+        if (clickedItem?.DataContext is not ProductSearchResultDto product ||
+            DataContext is not SalesWorkspaceViewModel viewModel)
+        {
+            return;
+        }
+
+        viewModel.ProductSearch.SelectedProduct = product;
+        if (viewModel.ProductSearch.AddSelectedCommand.CanExecute(null) != true)
         {
             return;
         }
 
         viewModel.ProductSearch.AddSelectedCommand.Execute(null);
         e.Handled = true;
+    }
+
+    private void OnProductSearchSelectionChanged(
+        object sender,
+        SelectionChangedEventArgs e)
+    {
+        if (sender is ListBox { SelectedItem: not null } listBox)
+        {
+            listBox.ScrollIntoView(listBox.SelectedItem);
+        }
     }
 
     private static T? FindByTag<T>(DependencyObject parent, object tag)

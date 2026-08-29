@@ -19,6 +19,7 @@ public sealed class SaleTabViewModel : ObservableObject
     private decimal _paidAmount;
     private decimal _outstandingAmount;
     private bool _hasDebt;
+    private bool _isRecentlyCreated;
     private PreviousCompletionPaymentStateDto? _previousCompletionPaymentState;
 
     public SaleTabViewModel(
@@ -75,6 +76,15 @@ public sealed class SaleTabViewModel : ObservableObject
         get => _totalAmount;
         private set => SetProperty(ref _totalAmount, value);
     }
+
+    public bool IsRecentlyCreated
+    {
+        get => _isRecentlyCreated;
+        private set => SetProperty(ref _isRecentlyCreated, value);
+    }
+
+    public void SetRecentlyCreated(bool value)
+        => IsRecentlyCreated = value;
 
     public DateTime DateCreated { get; }
 
