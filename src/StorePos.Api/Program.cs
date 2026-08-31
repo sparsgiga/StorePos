@@ -6,7 +6,7 @@ using StorePos.Persistence.Initialization;
 var builder = WebApplication.CreateBuilder(args);
 
 var connectionString = builder.Configuration.GetConnectionString("StorePos")
-    ?? throw new InvalidOperationException("Connection string 'StorePos' was not found.");
+     ?? throw new InvalidOperationException("Connection string 'StorePos' was not found.");
 
 builder.Services.AddApplication();
 builder.Services.AddPersistence(connectionString);
